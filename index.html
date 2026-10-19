@@ -31,7 +31,26 @@
     --shadow: 0 10px 30px rgba(19, 49, 92, .10);
     --grad-blue: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-400) 100%);
     --grad-deep: linear-gradient(120deg, var(--navy) 0%, var(--blue-700) 55%, var(--blue-500) 100%);
+    /* 朝焼け（店名「アルバ」＝夜明け）の差し色 */
+    --coral: #ff7a59;
+    --peach: #ffb38a;
+    --gold: #f5b841;
+    --rose: #e86a92;
+    --mint: #22a88f;
+    --cream: #fff8f1;
+    --grad-dawn: linear-gradient(120deg, #ff6f61 0%, #ff9a5c 55%, #f7c548 100%);
+    --grad-sky: linear-gradient(115deg, #0b2545 0%, #173f78 38%, #2f6fd0 62%, #c46d9b 84%, #ff9f7a 100%);
+    /* カテゴリの差し色（.cat-0〜3 で上書き。既定は青） */
+    --accent: var(--blue-600);
+    --accent-2: var(--blue-400);
+    --accent-soft: var(--blue-100);
+    --accent-ink: var(--blue-700);
+    --accent-tint: var(--blue-50);
   }
+  .cat-0 { --accent: #b8693a; --accent-2: #e3a46b; --accent-soft: #fbeadb; --accent-ink: #8a4a22; --accent-tint: #fff8f2; --art-bg: #fbeee2; --art-blob: #f5dcc5; --art-shadow: #d9a77c; }
+  .cat-1 { --accent: #1b9a83; --accent-2: #5ccfb2; --accent-soft: #dcf5ee; --accent-ink: #12705f; --accent-tint: #f3fcf9; --art-bg: #e2f6f0; --art-blob: #c7eee2; --art-shadow: #79cdb6; }
+  .cat-2 { --accent: #e8603f; --accent-2: #ff9f7a; --accent-soft: #ffe6dc; --accent-ink: #b8442a; --accent-tint: #fff7f3; --art-bg: #ffece4; --art-blob: #ffd8c8; --art-shadow: #f2a588; }
+  .cat-3 { --accent: #d4508a; --accent-2: #f39ac0; --accent-soft: #fde3ee; --accent-ink: #a5376a; --accent-tint: #fff6fa; --art-bg: #fdeaf2; --art-blob: #f8d1e2; --art-shadow: #eba2c2; }
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -39,11 +58,12 @@
     color: var(--text);
     font-family: "Yu Gothic UI", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
     font-size: 15px;
-    background-color: #f3f8ff;
+    background-color: #fbf7f4;
     background-image:
-      radial-gradient(900px 420px at 0% 0%, #d3e4fc 0%, transparent 60%),
-      radial-gradient(700px 380px at 100% 20%, #e3edfd 0%, transparent 60%),
-      linear-gradient(180deg, #edf4fe 0%, #f8fbff 100%);
+      radial-gradient(800px 420px at 0% 10%, rgba(59, 125, 221, .14) 0%, transparent 60%),
+      radial-gradient(700px 420px at 100% 60%, rgba(255, 159, 122, .16) 0%, transparent 60%),
+      radial-gradient(600px 360px at 30% 100%, rgba(247, 197, 72, .12) 0%, transparent 60%),
+      linear-gradient(180deg, #f3f5fc 0%, #fbf7f4 100%);
   }
   button, input { font: inherit; }
   button {
@@ -79,17 +99,18 @@
   header {
     position: relative; overflow: hidden;
     display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;
-    padding: 28px 32px 56px;
-    background: var(--grad-deep);
+    padding: 28px 32px 78px;
+    background: var(--grad-sky);
     color: #fff;
   }
   header::before, header::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
-  header::before { width: 420px; height: 420px; right: -120px; top: -220px; background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%); }
-  header::after { width: 300px; height: 300px; left: 30%; bottom: -230px; background: radial-gradient(circle, rgba(246,178,107,.35), transparent 70%); }
+  header::before { width: 520px; height: 520px; left: -180px; top: -300px; background: radial-gradient(circle, rgba(255,255,255,.14), transparent 70%); }
+  header::after { width: 340px; height: 340px; right: 8%; bottom: -230px; background: radial-gradient(circle, rgba(255,214,122,.95) 0%, rgba(255,150,100,.55) 35%, transparent 70%); }
+  header .waves { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 64px; pointer-events: none; }
   .brand { position: relative; }
-  .brand .en { display: block; font-size: 12px; letter-spacing: .45em; color: var(--blue-200); margin-bottom: 4px; }
+  .brand .en { display: block; font-size: 12px; letter-spacing: .45em; color: #ffd9c2; margin-bottom: 4px; }
   header h1 { margin: 0; font-size: 32px; letter-spacing: .1em; text-shadow: 0 2px 12px rgba(0,0,0,.2); }
-  .brand .dawn-line { display: block; width: 64px; height: 3px; margin-top: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--dawn), transparent); }
+  .brand .dawn-line { display: block; width: 80px; height: 4px; margin-top: 10px; border-radius: 4px; background: linear-gradient(90deg, var(--gold), var(--coral), transparent); }
   header nav { position: relative; display: flex; flex-wrap: wrap; gap: 8px; }
   header nav button {
     background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.35);
@@ -101,7 +122,7 @@
   main {
     position: relative;
     display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start;
-    max-width: 1240px; margin: -30px auto 0; padding: 0 24px 32px;
+    max-width: 1240px; margin: -44px auto 0; padding: 0 24px 32px;
   }
   @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); padding: 0 16px 24px; } }
   .panel {
@@ -113,13 +134,15 @@
   }
   .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
   .panel h2 { margin: 0; font-size: 18px; color: var(--blue-900); display: flex; align-items: center; gap: 10px; }
-  .panel h2::before { content: ""; width: 6px; height: 20px; border-radius: 3px; background: var(--grad-blue); }
+  .panel h2::before { content: ""; width: 6px; height: 20px; border-radius: 3px; background: linear-gradient(180deg, var(--blue-500), var(--rose) 60%, var(--gold)); }
 
   /* ---- タブ（セグメント） ---- */
   .tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 5px; border-radius: 22px; background: var(--blue-100); }
   .tabs button { border: 0; background: transparent; color: var(--blue-800); padding: 7px 16px; font-weight: 600; }
   .tabs button:hover:not(:disabled) { background: rgba(255,255,255,.7); }
-  .tabs button[aria-selected="true"] { background: var(--grad-blue); color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 196, .35); }
+  .tabs button[aria-selected="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; box-shadow: 0 4px 12px rgba(20, 33, 61, .22); }
+  .tabs button[class^="cat-"]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
+  .tabs button[class^="cat-"][aria-selected="true"]::before { background: #fff; }
 
   /* ---- メニューカード ---- */
   .menu-list {
@@ -130,18 +153,23 @@
     position: relative; overflow: hidden;
     display: grid; grid-template-columns: 1fr auto; gap: 14px 8px; align-items: center;
     padding: 18px 16px 16px; border-radius: 14px;
-    background: linear-gradient(180deg, #fff 0%, var(--blue-50) 100%);
+    background: linear-gradient(180deg, #fff 0%, var(--accent-tint) 100%);
     border: 1px solid var(--line);
     transition: transform .15s, box-shadow .15s, border-color .15s;
   }
-  .menu-item::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grad-blue); }
-  .menu-item:hover { transform: translateY(-2px); border-color: var(--blue-400); box-shadow: 0 10px 22px rgba(29, 78, 137, .14); }
+  .menu-item::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; z-index: 1; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .menu-item:hover { transform: translateY(-3px); border-color: var(--accent-2); box-shadow: 0 14px 28px rgba(20, 33, 61, .14); }
   .menu-item .name { font-weight: 700; color: var(--navy); }
   .price-chip {
     justify-self: end; padding: 3px 12px; border-radius: 999px;
-    background: var(--blue-100); color: var(--blue-700); font-weight: 800; white-space: nowrap;
+    background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+  .menu-item .add, .rec-item .add, .slide .add {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .menu-item .add:hover:not(:disabled), .rec-item .add:hover:not(:disabled), .slide .add:hover:not(:disabled) { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
   .menu-item .add { justify-self: end; padding: 7px 18px; }
   .menu-item .error { grid-column: 1 / -1; margin-top: -6px; }
   .menu-item .error:empty { display: none; }
@@ -160,8 +188,8 @@
   /* アレルギー絞り込み */
   .allergen-bar {
     margin-bottom: 16px; padding: 14px 16px; border-radius: 14px;
-    background: linear-gradient(135deg, var(--blue-50), var(--blue-100));
-    border: 1px solid var(--line);
+    background: linear-gradient(135deg, #fff6ee, #fdeee6 60%, #f1f4fd);
+    border: 1px solid #f6e0d2;
   }
   .allergen-bar .bar-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
   .allergen-bar .title { font-weight: 700; color: var(--blue-900); }
@@ -169,11 +197,12 @@
   .allergen-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
   .allergen-buttons button { padding: 5px 14px; background: #fff; }
   .allergen-buttons button[aria-pressed="true"] {
-    background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 700;
-    text-decoration: line-through; text-decoration-color: rgba(246, 178, 107, .9); text-decoration-thickness: 2px;
+    background: var(--grad-dawn); border-color: transparent; color: #fff; font-weight: 700;
+    text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, .85); text-decoration-thickness: 2px;
+    box-shadow: 0 4px 12px rgba(255, 111, 97, .35);
   }
   .allergen-buttons .clear { border-style: dashed; color: var(--muted); }
-  .allergen-status { font-size: 13px; color: var(--blue-700); font-weight: 700; }
+  .allergen-status { font-size: 13px; color: #c2502f; font-weight: 700; }
   .allergen-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; }
   .allergen-chips .label { color: var(--muted); margin-right: 2px; }
   .allergen-chip { padding: 1px 8px; border-radius: 999px; background: #fff1e3; color: #9a4d0b; border: 1px solid #f6d3ae; font-weight: 700; }
@@ -183,23 +212,25 @@
   .rec-note { margin: 0 0 8px; font-size: 13px; color: var(--blue-700); font-weight: 700; }
 
   /* 数量ステッパー */
-  .stepper { display: inline-flex; align-items: center; justify-self: start; border: 1px solid var(--blue-200); border-radius: 999px; background: #fff; overflow: hidden; }
-  .stepper button { border: 0; border-radius: 0; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; color: var(--blue-600); background: #fff; }
-  .stepper button:hover:not(:disabled) { background: var(--blue-100); }
+  .stepper { display: inline-flex; align-items: center; justify-self: start; border: 1px solid var(--accent-soft); border-radius: 999px; background: #fff; overflow: hidden; }
+  .stepper button { border: 0; border-radius: 0; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; color: var(--accent); background: #fff; }
+  .stepper button:hover:not(:disabled) { background: var(--accent-soft); }
   .stepper input { width: 2.6em; border: 0; border-radius: 0; padding: 4px 0; text-align: center; font-weight: 700; }
   .stepper input:focus-visible { outline: 0; background: var(--blue-50); }
 
   /* ---- 注文パネル（濃紺） ---- */
   .order-panel {
-    position: sticky; top: 16px;
-    background: linear-gradient(165deg, var(--navy) 0%, var(--blue-900) 45%, var(--blue-700) 100%);
+    background:
+      radial-gradient(420px 220px at 100% 100%, rgba(255, 159, 122, .28), transparent 70%),
+      linear-gradient(165deg, var(--navy) 0%, var(--blue-900) 45%, var(--blue-700) 100%);
     color: #fff; border: 0;
     box-shadow: 0 18px 40px rgba(11, 37, 69, .35);
   }
-  @media (max-width: 860px) { .order-panel { position: static; } }
+  .side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-self: start; min-width: 0; }
+  @media (min-width: 861px) and (min-height: 940px) { .side { position: sticky; top: 16px; } }
   .order-panel h2 { color: #fff; }
   .order-panel h2::before { background: linear-gradient(180deg, var(--dawn), #ffd6a8); }
-  .count-badge { padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,.14); color: var(--blue-100); }
+  .count-badge { padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--gold); color: var(--navy); }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 9px 6px; text-align: left; }
   th { font-size: 12px; letter-spacing: .05em; font-weight: 700; }
@@ -212,13 +243,52 @@
   .order-empty { margin: 12px 0 4px; padding: 22px 12px; text-align: center; line-height: 1.8; color: var(--blue-200); border: 1px dashed rgba(255,255,255,.25); border-radius: 12px; }
   .total { display: flex; justify-content: space-between; align-items: baseline; margin: 18px 0 16px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,.3); }
   .total .label { color: var(--blue-200); font-size: 15px; letter-spacing: .1em; }
-  .total .num { font-size: 32px; font-weight: 800; }
+  .total .num { font-size: 32px; font-weight: 800; color: #ffe2b8; }
   #checkout-btn {
     width: 100%; padding: 16px; font-size: 20px; letter-spacing: .3em; border-radius: 14px;
-    background: linear-gradient(90deg, var(--blue-500) 0%, #5aa2ff 100%);
-    box-shadow: 0 10px 26px rgba(59, 125, 221, .55);
+    background: var(--grad-dawn);
+    box-shadow: 0 10px 26px rgba(255, 111, 97, .45);
+    text-shadow: 0 1px 2px rgba(150, 50, 20, .35);
   }
+  #checkout-btn:hover:not(:disabled) { background: var(--grad-dawn); box-shadow: 0 14px 30px rgba(255, 111, 97, .55); }
   #checkout-btn:disabled { box-shadow: none; }
+
+  /* ---- 人気メニュー（スライド） ---- */
+  .popular-sub { font-size: 12px; color: var(--muted); }
+  .carousel { position: relative; }
+  .carousel-viewport { overflow: hidden; border-radius: 16px; touch-action: pan-y; }
+  .carousel-track { display: flex; transition: transform .55s cubic-bezier(.2, .8, .2, 1); }
+  @media (prefers-reduced-motion: reduce) { .carousel-track { transition: none; } }
+  .slide {
+    flex: 0 0 100%; min-width: 0; overflow: hidden; border-radius: 16px;
+    background: linear-gradient(180deg, #fff 0%, var(--accent-tint) 100%);
+    border: 1px solid var(--line);
+  }
+  .slide-art { position: relative; aspect-ratio: 16 / 10; }
+  .rank {
+    position: absolute; top: 10px; left: 10px; padding: 4px 12px; border-radius: 999px;
+    background: var(--grad-sky); color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .05em;
+    box-shadow: 0 4px 12px rgba(11, 37, 69, .3);
+  }
+  .rank.top { background: linear-gradient(135deg, #f7c548, #ffa94d); color: #5a3400; }
+  .slide-body { display: grid; gap: 8px; padding: 14px 16px 16px; }
+  .slide-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .slide-title strong { font-size: 17px; color: var(--navy); }
+  .slide-meta { font-size: 12px; font-weight: 700; color: var(--accent-ink); }
+  .slide .add { padding: 9px; }
+  .carousel-nav {
+    position: absolute; top: 24%; width: 38px; height: 38px; padding: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .92); border-color: transparent; color: var(--navy);
+    font-size: 22px; line-height: 1; box-shadow: 0 4px 14px rgba(11, 37, 69, .2);
+  }
+  .carousel-nav:hover:not(:disabled) { background: #fff; }
+  .carousel-nav.prev { left: 8px; }
+  .carousel-nav.next { right: 8px; }
+  .carousel-nav[hidden] { display: none; }
+  .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .carousel-dots button { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 999px; background: var(--blue-200); transition: width .2s, background .2s; }
+  .carousel-dots button[aria-current="true"] { width: 26px; background: var(--grad-dawn); }
+  .popular-empty { padding: 24px 12px; text-align: center; color: var(--muted); border: 1px dashed var(--blue-200); border-radius: 14px; }
 
   /* ---- ダイアログ ---- */
   dialog {
@@ -228,7 +298,7 @@
     box-shadow: 0 30px 80px rgba(11, 37, 69, .40);
   }
   dialog::backdrop { background: rgba(11, 37, 69, .55); backdrop-filter: blur(3px); }
-  .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; background: var(--grad-deep); color: #fff; }
+  .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; background: var(--grad-sky); color: #fff; }
   .dialog-head h2 { margin: 0; font-size: 18px; letter-spacing: .05em; }
   .dialog-head button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
   .dialog-head button:hover:not(:disabled) { background: rgba(255,255,255,.24); }
@@ -238,7 +308,8 @@
   .dialog-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 0 22px 22px; }
   .dialog-foot button { padding: 10px 22px; }
   #checkout-dialog { width: min(540px, calc(100vw - 32px)); }
-  .big-total { text-align: center; margin: 22px 0 6px; padding: 18px; border-radius: 16px; background: linear-gradient(135deg, var(--blue-50), var(--blue-100)); color: var(--blue-900); font-size: 34px; font-weight: 800; }
+  #checkout-dialog .dialog-foot .primary { background: var(--grad-dawn); box-shadow: 0 8px 20px rgba(255, 111, 97, .4); }
+  .big-total { text-align: center; margin: 22px 0 6px; padding: 18px; border-radius: 16px; background: linear-gradient(135deg, #fff3e8, #fde6ef 50%, #e7effd); color: var(--blue-900); font-size: 34px; font-weight: 800; }
   .done { text-align: center; line-height: 1.9; font-size: 17px; color: var(--blue-900); }
 
   .field { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: center; margin-bottom: 12px; }
@@ -246,17 +317,17 @@
   @media (max-width: 560px) { .field { grid-template-columns: 1fr; } }
   .choices { display: flex; flex-wrap: wrap; gap: 6px; }
   .choices label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--blue-200); background: #fff; color: var(--blue-800); }
-  .choices label:has(input:checked) { background: var(--blue-100); border-color: var(--blue-500); font-weight: 700; }
-  .choices input { accent-color: var(--blue-600); margin: 0; }
+  .choices label:has(input:checked) { background: linear-gradient(135deg, #fff1e8, #fde6ef); border-color: var(--coral); color: #b8442a; font-weight: 700; }
+  .choices input { accent-color: var(--coral); margin: 0; }
   .rec-list { list-style: none; margin: 14px 0 0; padding: 0; }
   .rec-item {
     display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 8px 12px; align-items: center;
     padding: 14px 16px; margin-bottom: 10px; border-radius: 14px;
     background: linear-gradient(90deg, var(--blue-50), #fff);
-    border: 1px solid var(--line); border-left: 5px solid var(--blue-500);
+    border: 1px solid var(--line); border-left: 5px solid var(--accent);
   }
   .rec-item strong { color: var(--navy); }
-  .rec-item .reasons { grid-column: 2 / -1; font-size: 13px; color: var(--blue-700); }
+  .rec-item .reasons { grid-column: 2 / -1; font-size: 13px; color: var(--accent-ink); }
   .rec-item .allergen-chips { grid-column: 2 / -1; }
   .rec-item .error { grid-column: 2 / -1; }
   .rec-item .error:empty { display: none; }
@@ -270,6 +341,9 @@
   .history-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .kpis { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
   .kpi { flex: 1 1 160px; border-radius: 14px; padding: 14px 16px; background: var(--grad-deep); color: #fff; box-shadow: 0 8px 20px rgba(29, 78, 137, .25); }
+  .kpi:nth-child(2) { background: var(--grad-dawn); box-shadow: 0 8px 20px rgba(255, 111, 97, .3); }
+  .kpi:nth-child(3) { background: linear-gradient(120deg, #12705f, #22a88f 60%, #5ccfb2); box-shadow: 0 8px 20px rgba(34, 168, 143, .3); }
+  .kpi:nth-child(n+2) .label { color: rgba(255, 255, 255, .85); }
   .kpi .label { font-size: 12px; letter-spacing: .08em; color: var(--blue-200); }
   .kpi .value { font-size: 24px; font-weight: 800; }
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
@@ -282,7 +356,7 @@
 
   #toast {
     position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 10px);
-    background: var(--grad-deep); color: #fff; padding: 11px 22px; border-radius: 999px;
+    background: var(--grad-dawn); color: #fff; padding: 11px 22px; border-radius: 999px; font-weight: 700;
     box-shadow: 0 10px 26px rgba(11, 37, 69, .35);
     opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
   }
@@ -306,6 +380,11 @@
     <button id="open-recommend" type="button">おすすめを聞く</button>
     <button id="open-history" type="button">注文履歴・集計</button>
   </nav>
+  <svg class="waves" viewBox="0 0 1440 64" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 26c160 22 320 26 480 10S800 0 960 12s320 30 480 14v38H0z" fill="#ffb38a" opacity=".22"/>
+    <path d="M0 40c180 16 360 18 540 6s360-22 540-12 240 18 360 10v20H0z" fill="#dfe7fb" opacity=".55"/>
+    <path d="M0 50c200 10 400 12 600 4s400-14 600-6 160 10 240 6v10H0z" fill="#f3f5fc"/>
+  </svg>
 </header>
 
 <main>
@@ -322,6 +401,7 @@
     <ul class="menu-list" id="menu-list"></ul>
   </section>
 
+  <div class="side">
   <section class="panel order-panel" aria-labelledby="order-title">
     <div class="panel-head"><h2 id="order-title">ご注文内容</h2><span class="count-badge" id="order-count"></span></div>
     <div class="table-wrap">
@@ -334,6 +414,17 @@
     <div class="total"><span class="label">合計</span><span class="num" id="order-total"></span></div>
     <button id="checkout-btn" class="primary" type="button">会計</button>
   </section>
+
+  <section class="panel popular-panel" aria-labelledby="popular-title" aria-roledescription="carousel">
+    <div class="panel-head"><h2 id="popular-title">人気メニュー</h2><span class="popular-sub" id="popular-sub"></span></div>
+    <div class="carousel" id="popular-carousel">
+      <div class="carousel-viewport"><div class="carousel-track" id="popular-track" aria-live="off"></div></div>
+      <button type="button" class="carousel-nav prev" id="popular-prev" aria-label="前のメニュー">‹</button>
+      <button type="button" class="carousel-nav next" id="popular-next" aria-label="次のメニュー">›</button>
+    </div>
+    <div class="carousel-dots" id="popular-dots"></div>
+  </section>
+  </div>
 </main>
 
 <dialog id="checkout-dialog" aria-labelledby="checkout-title">
@@ -713,9 +804,9 @@ function recommend({ menu = MENU, sales, mood = null, temperature = null, budget
 // ===== 参考画像（自作イラスト。固定の SVG 文字列で、外部ファイル・通信なし） =====
 // ※ここの文字列だけは HTML として解釈させる（ユーザー入力や localStorage の値は絶対に混ぜない）。
 
-const ART_BG = '<rect width="160" height="100" fill="#e4eefc"/>'
-  + '<circle cx="132" cy="14" r="30" fill="#d4e5fb"/><circle cx="22" cy="94" r="28" fill="#d4e5fb"/>'
-  + '<ellipse cx="80" cy="91" rx="50" ry="5" fill="#9fbde8" opacity=".35"/>';
+const ART_BG = '<rect width="160" height="100" style="fill:var(--art-bg,#e4eefc)"/>'
+  + '<circle cx="132" cy="14" r="30" style="fill:var(--art-blob,#d4e5fb)"/><circle cx="22" cy="94" r="28" style="fill:var(--art-blob,#d4e5fb)"/>'
+  + '<ellipse cx="80" cy="91" rx="50" ry="5" style="fill:var(--art-shadow,#9fbde8)" opacity=".35"/>';
 const STEAM = '<g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".95">'
   + '<path d="M70 32c-4-5 4-8 0-14"/><path d="M81 29c-4-5 4-8 0-14"/><path d="M92 32c-4-5 4-8 0-14"/></g>';
 
@@ -940,7 +1031,7 @@ function renderTabs() {
   tabs.replaceChildren(...MENU.map(([category, items], i) => {
     const shown = visible[i][1].length;
     return el("button", {
-      type: "button", role: "tab", "aria-selected": String(i === currentCategory),
+      type: "button", role: "tab", class: `cat-${i}`, "aria-selected": String(i === currentCategory),
       onclick: () => { currentCategory = i; renderTabs(); renderMenu(); },
     }, category, shown < items.length ? el("span", { class: "tab-count" }, `(${shown})`) : null);
   }));
@@ -969,6 +1060,7 @@ function onAllergensChanged() {
   renderAllergenBar();
   renderTabs();
   renderMenu();
+  renderPopular();
   if ($("recommend-dialog").open) renderRecommend();
 }
 
@@ -1004,7 +1096,14 @@ function quantityStepper(name, onEnter) {
   return { stepper, input };
 }
 
+/** カテゴリ名 → 色のクラス（cat-0〜3）。 */
+function categoryClass(category) {
+  const index = MENU.findIndex(([c]) => c === category);
+  return index >= 0 ? `cat-${index}` : "";
+}
+
 function renderMenu() {
+  $("menu-list").className = `menu-list cat-${currentCategory}`;
   const [, items] = filterMenu(MENU, excludedAllergens)[currentCategory];
   if (items.length === 0) {
     $("menu-list").replaceChildren(el("li", { class: "empty-menu" },
@@ -1077,6 +1176,110 @@ function confirmCheckout() {
   $("checkout-foot").replaceChildren(el("button", { type: "button", class: "primary", onclick: () => $("checkout-dialog").close() }, "次の注文へ"));
   order = new Order();
   renderOrder();
+  renderPopular();  // 注文数が変わったので人気メニューを更新
+}
+
+// ---- 人気メニュー（スライド） ----
+
+const POPULAR_LIMIT = 5;
+const SLIDE_INTERVAL_MS = 4500;
+const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+let popularIndex = 0;
+let popularTimer = null;
+let popularPaused = false;
+
+/** 注文数（記録上の販売数）の多い品を多い順に返す。同数ならメニュー順。絞り込み中のアレルギーを含む品は除く。 */
+function popularItems(sales, excluded, limit = POPULAR_LIMIT) {
+  return filterMenu(MENU, excluded)
+    .flatMap(([category, items]) => items.map(([name, price]) => ({ name, price, category, count: sales[name] || 0 })))
+    .map((item, order) => ({ ...item, order }))
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.count - a.count || a.order - b.order)
+    .slice(0, limit)
+    .map(({ order, ...item }) => item);
+}
+
+/** 注文データがまだないときに紹介する品（各カテゴリの先頭の品）。 */
+function featuredItems(excluded) {
+  return filterMenu(MENU, excluded)
+    .filter(([, items]) => items.length > 0)
+    .map(([category, items]) => ({ name: items[0][0], price: items[0][1], category, count: 0 }));
+}
+
+function renderPopular() {
+  let items = popularItems(loadItemSales(), excludedAllergens);
+  const ranked = items.length > 0;
+  if (!ranked) items = featuredItems(excludedAllergens);
+  $("popular-title").textContent = ranked ? "人気メニュー" : "注目のメニュー";
+  $("popular-sub").textContent = ranked ? `注文数トップ${items.length}` : "会計すると注文数の多い順に紹介します";
+  popularIndex = Math.min(popularIndex, Math.max(items.length - 1, 0));
+
+  if (items.length === 0) {
+    $("popular-track").replaceChildren(el("div", { class: "slide popular-empty" }, "表示できるメニューがありません。"));
+  } else {
+    $("popular-track").replaceChildren(...items.map((item, i) => {
+      const art = itemArt(item.name, "art slide-art");
+      if (ranked) art.append(el("span", { class: i === 0 ? "rank top" : "rank" }, `No.${i + 1}`));
+      return el("article", {
+        class: `slide ${categoryClass(item.category)}`, "aria-roledescription": "slide", "aria-label": `${i + 1} / ${items.length}`,
+      },
+        art,
+        el("div", { class: "slide-body" },
+          el("div", { class: "slide-title" }, el("strong", {}, item.name), el("span", { class: "price-chip" }, formatPrice(item.price))),
+          el("div", { class: "slide-meta" }, ranked ? `これまでに ${item.count}個 注文 ｜ ${item.category}` : item.category),
+          allergenChips(item.name),
+          el("button", {
+            type: "button", class: "add primary",
+            onclick: () => { const error = addToOrder(item.name, "1"); if (error) toast(error); },
+          }, "注文に追加")));
+    }));
+  }
+  $("popular-dots").replaceChildren(...items.map((item, i) => el("button", {
+    type: "button", "aria-label": `${i + 1}枚目（${item.name}）を表示`, onclick: () => showSlide(i),
+  })));
+  showSlide(popularIndex);
+  restartAutoplay();
+}
+
+function slideCount() {
+  return $("popular-track").querySelectorAll("article.slide").length;
+}
+
+function showSlide(index) {
+  const count = slideCount();
+  popularIndex = count ? ((index % count) + count) % count : 0;
+  $("popular-track").style.transform = `translateX(-${popularIndex * 100}%)`;
+  // 見えていないスライドのボタンにはフォーカスが行かないようにする
+  $("popular-track").querySelectorAll("article.slide").forEach((slide, i) => { slide.inert = i !== popularIndex; });
+  [...$("popular-dots").children].forEach((dot, i) => dot.setAttribute("aria-current", String(i === popularIndex)));
+  $("popular-prev").hidden = $("popular-next").hidden = count <= 1;
+}
+
+function restartAutoplay() {
+  clearInterval(popularTimer);
+  if (reduceMotion) return;  // 動きを減らす設定の人には自動で動かさない
+  popularTimer = setInterval(() => {
+    if (!popularPaused && !document.hidden && slideCount() > 1) showSlide(popularIndex + 1);
+  }, SLIDE_INTERVAL_MS);
+}
+
+function setupPopular() {
+  const carousel = $("popular-carousel");
+  $("popular-prev").addEventListener("click", () => { showSlide(popularIndex - 1); restartAutoplay(); });
+  $("popular-next").addEventListener("click", () => { showSlide(popularIndex + 1); restartAutoplay(); });
+  carousel.addEventListener("mouseenter", () => { popularPaused = true; });
+  carousel.addEventListener("mouseleave", () => { popularPaused = false; });
+  carousel.addEventListener("focusin", () => { popularPaused = true; });
+  carousel.addEventListener("focusout", () => { popularPaused = false; });
+  // スワイプ（指やペンで左右に払う）
+  let startX = null;
+  carousel.addEventListener("pointerdown", (e) => { startX = e.clientX; });
+  carousel.addEventListener("pointerup", (e) => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 40) { showSlide(popularIndex + (dx < 0 ? 1 : -1)); restartAutoplay(); }
+  });
 }
 
 // ---- おすすめ ----
@@ -1121,7 +1324,7 @@ function renderRecommend() {
     const error = el("span", { class: "error", role: "alert" });
     const add = () => { error.textContent = addToOrder(r.name, input.value) || ""; };
     const { stepper, input } = quantityStepper(r.name, add);
-    return el("li", { class: "rec-item" },
+    return el("li", { class: `rec-item ${categoryClass(r.category)}` },
       itemArt(r.name, "art rec-art"),
       el("strong", {}, r.name),
       el("span", { class: "price-chip" }, formatPrice(r.price)),
@@ -1227,10 +1430,12 @@ for (const b of document.querySelectorAll("[data-close]")) {
   b.addEventListener("click", () => b.closest("dialog").close());
 }
 setupRecommend();
+setupPopular();
 renderAllergenBar();
 renderTabs();
 renderMenu();
 renderOrder();
+renderPopular();
 </script>
 </body>
 </html>
