@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 kdaisuru — 店舗「ブルー・アルバ」向けのアプリケーション。
 Python（標準ライブラリのみ）で実装。画面はウィンドウ版（tkinter、標準）とコンソール版（`--cli`）の2種類があり、注文・記録・おすすめのロジックは共通。
+加えて、Python 不要でブラウザだけで動く HTML 版（`index.html` 単体）がある。HTML 版はロジックを JavaScript で別に持つ（下記「HTML 版」参照）。
 
 ## Requirements
 
@@ -39,11 +40,19 @@ Python（標準ライブラリのみ）で実装。画面はウィンドウ版�
    - 年齢に限らず、すべての数値入力（番号・数量・予算・年齢）を `validation.parse_int` 経由で変換する。`int()` や `isdigit()` で直接変換しない（`isdigit()` は「²」等を通し `int()` で例外になるため）。
    - 不正な入力は理由（数字以外 / 小数 / マイナス / 範囲外 / 未入力）を表示して入力し直してもらう。全角数字は受け付ける。
    - ウィンドウ版のおすすめ画面は、入力に誤りがある間はおすすめを出さず、理由を赤字で表示する。
+9. HTML で起動できるようにする。
+   - 形式は「HTML ファイル単体」（ユーザー確認済み）。`index.html` をダブルクリックするとブラウザで動き、Python は不要。
+   - 要件1〜8をすべて HTML 版でも満たす。注文記録はブラウザの localStorage（キー `blue-alba-orders`）に保存し、Python 版の `data/orders.csv` と同じ形式の CSV をダウンロードできる。Python 版の記録とは共有されない。
+   - 外部ライブラリ・外部ファイル・通信なし（オフラインで動く）。画面幅が狭い（スマホ）場合は1列に並ぶ。
+10. HTML 版の注文画面をおしゃれに、青色を多めに使う。
+   - 濃紺〜青のグラデーションのヘッダー、カード型のメニュー、濃紺の注文パネルで構成。色は `:root` の `--navy` / `--blue-*` 変数で管理し、アクセントは夜明け色の `--dawn`（店名の「アルバ」＝夜明け）を少量だけ使う。
+   - 数量は −／＋ ボタン付き（直接入力も可。不正な値で −／＋ を押すと 1 に戻る）。注文パネルに合計点数のバッジを表示。
 
 ## Commands
 
 - Run（ウィンドウ版）: `python main.py`
 - Run（コンソール版）: `python main.py --cli`
+- Run（HTML 版）: `index.html` をブラウザで開く（ダブルクリック）
 - この環境では `python` が Microsoft Store のエイリアスに解決されることがある（パイプ入力時など）。その場合は `C:\Users\koyo\AppData\Local\Python\bin\python.exe` を直接使う。
 
 ## Architecture
@@ -73,6 +82,14 @@ Python（標準ライブラリのみ）で実装。画面はウィンドウ版�
   - `parse_int(text, label, minimum, maximum, required)` — どんな文字列でも `InputError`（画面にそのまま出せる日本語メッセージ）以外の例外を出さない。
   - `parse_age()` / `parse_budget()` — 年齢・予算用。範囲は `AGE_MIN` / `AGE_MAX` / `BUDGET_MAX`。
   - 新しい入力欄を追加するときは、ここに `parse_xxx` を足して両方の画面から使う。
+
+
+### HTML 版（`index.html`）
+
+- 1ファイルに HTML / CSS / JavaScript をすべて含む。JS 内は Python 版のモジュールに対応する区切り（データ / 入力チェック / 注文 / 注文記録 / おすすめ / 画面）で書いている。
+- **メニュー・価格・タグ・ルール・メッセージ文言は Python 版と二重管理**。`menu.py` / `order.py` / `recommend.py` / `records.py` / `validation.py` を変えたら `index.html` の対応箇所も必ず揃える（逆も同様）。
+- 画面に文字列を出すときは `el()` ヘルパー（`textContent` で入れる）を使い、`innerHTML` に文字列を入れない（localStorage の中身は書き換えられうるため）。
+- 動作確認はヘッドレスの Edge（`msedge --headless=new --dump-dom` / `--screenshot`）で行える。ヘッドレスはウィンドウ幅の下限が約500pxなので、スマホ幅の確認は幅380px程度の iframe に入れて撮る。
 
 ## Conventions
 

@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ブルー・アルバ 注文システム</title>
+<!--
+  HTML版（このファイル単体で動く）。ダブルクリックでブラウザが開く。
+  メニュー・タグ・ルールは Python 版（menu.py / order.py / recommend.py / records.py / validation.py）と同じ内容を
+  JavaScript で持っている。どちらかを変えたら、もう一方も必ず揃えること。
+  注文記録はブラウザの localStorage に保存し、Python 版と同じ形式の CSV をダウンロードできる。
+-->
+<style>
+  :root {
+    --navy: #0b2545;
+    --blue-900: #13315c;
+    --blue-800: #1a3f73;
+    --blue-700: #1d4e89;
+    --blue-600: #2563c4;
+    --blue-500: #3b7ddd;
+    --blue-400: #6b9fe8;
+    --blue-200: #bcd4f6;
+    --blue-100: #e1ecfb;
+    --blue-50: #f3f8ff;
+    --dawn: #f6b26b;
+    --text: #14213d;
+    --muted: #5b6b85;
+    --line: #d9e5f5;
+    --error: #c62828;
+    --radius: 18px;
+    --shadow: 0 10px 30px rgba(19, 49, 92, .10);
+    --grad-blue: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-400) 100%);
+    --grad-deep: linear-gradient(120deg, var(--navy) 0%, var(--blue-700) 55%, var(--blue-500) 100%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: "Yu Gothic UI", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+    font-size: 15px;
+    background-color: #f3f8ff;
+    background-image:
+      radial-gradient(900px 420px at 0% 0%, #d3e4fc 0%, transparent 60%),
+      radial-gradient(700px 380px at 100% 20%, #e3edfd 0%, transparent 60%),
+      linear-gradient(180deg, #edf4fe 0%, #f8fbff 100%);
+  }
+  button, input { font: inherit; }
+  button {
+    cursor: pointer;
+    border: 1px solid var(--blue-200);
+    background: #fff;
+    color: var(--blue-800);
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--blue-500); background: var(--blue-50); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--blue-400); outline-offset: 2px; }
+  button:disabled { cursor: not-allowed; opacity: .45; }
+  button.primary {
+    background: var(--grad-blue); border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 6px 16px rgba(37, 99, 196, .30);
+  }
+  button.primary:hover:not(:disabled) { background: var(--grad-blue); transform: translateY(-1px); box-shadow: 0 10px 22px rgba(37, 99, 196, .38); }
+  input[type="text"] {
+    border: 1px solid var(--blue-200);
+    border-radius: 10px;
+    padding: 6px 10px;
+    text-align: right;
+    color: var(--navy);
+    background: #fff;
+  }
+  .error { color: var(--error); font-size: 13px; min-height: 1em; }
+  .muted { color: var(--muted); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---- ヘッダー ---- */
+  header {
+    position: relative; overflow: hidden;
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;
+    padding: 28px 32px 56px;
+    background: var(--grad-deep);
+    color: #fff;
+  }
+  header::before, header::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
+  header::before { width: 420px; height: 420px; right: -120px; top: -220px; background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%); }
+  header::after { width: 300px; height: 300px; left: 30%; bottom: -230px; background: radial-gradient(circle, rgba(246,178,107,.35), transparent 70%); }
+  .brand { position: relative; }
+  .brand .en { display: block; font-size: 12px; letter-spacing: .45em; color: var(--blue-200); margin-bottom: 4px; }
+  header h1 { margin: 0; font-size: 32px; letter-spacing: .1em; text-shadow: 0 2px 12px rgba(0,0,0,.2); }
+  .brand .dawn-line { display: block; width: 64px; height: 3px; margin-top: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--dawn), transparent); }
+  header nav { position: relative; display: flex; flex-wrap: wrap; gap: 8px; }
+  header nav button {
+    background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.35);
+    backdrop-filter: blur(6px); padding: 8px 18px;
+  }
+  header nav button:hover:not(:disabled) { background: rgba(255,255,255,.24); border-color: #fff; }
+
+  /* ---- レイアウト ---- */
+  main {
+    position: relative;
+    display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start;
+    max-width: 1240px; margin: -30px auto 0; padding: 0 24px 32px;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); padding: 0 16px 24px; } }
+  .panel {
+    background: #fff;
+    border: 1px solid rgba(255,255,255,.8);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .panel h2 { margin: 0; font-size: 18px; color: var(--blue-900); display: flex; align-items: center; gap: 10px; }
+  .panel h2::before { content: ""; width: 6px; height: 20px; border-radius: 3px; background: var(--grad-blue); }
+
+  /* ---- タブ（セグメント） ---- */
+  .tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 5px; border-radius: 22px; background: var(--blue-100); }
+  .tabs button { border: 0; background: transparent; color: var(--blue-800); padding: 7px 16px; font-weight: 600; }
+  .tabs button:hover:not(:disabled) { background: rgba(255,255,255,.7); }
+  .tabs button[aria-selected="true"] { background: var(--grad-blue); color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 196, .35); }
+
+  /* ---- メニューカード ---- */
+  .menu-list {
+    list-style: none; margin: 18px 0 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;
+  }
+  .menu-item {
+    position: relative; overflow: hidden;
+    display: grid; grid-template-columns: 1fr auto; gap: 14px 8px; align-items: center;
+    padding: 18px 16px 16px; border-radius: 14px;
+    background: linear-gradient(180deg, #fff 0%, var(--blue-50) 100%);
+    border: 1px solid var(--line);
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .menu-item::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grad-blue); }
+  .menu-item:hover { transform: translateY(-2px); border-color: var(--blue-400); box-shadow: 0 10px 22px rgba(29, 78, 137, .14); }
+  .menu-item .name { font-weight: 700; color: var(--navy); }
+  .price-chip {
+    justify-self: end; padding: 3px 12px; border-radius: 999px;
+    background: var(--blue-100); color: var(--blue-700); font-weight: 800; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .menu-item .add { justify-self: end; padding: 7px 18px; }
+  .menu-item .error { grid-column: 1 / -1; margin-top: -6px; }
+  .menu-item .error:empty { display: none; }
+
+  /* 数量ステッパー */
+  .stepper { display: inline-flex; align-items: center; justify-self: start; border: 1px solid var(--blue-200); border-radius: 999px; background: #fff; overflow: hidden; }
+  .stepper button { border: 0; border-radius: 0; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; color: var(--blue-600); background: #fff; }
+  .stepper button:hover:not(:disabled) { background: var(--blue-100); }
+  .stepper input { width: 2.6em; border: 0; border-radius: 0; padding: 4px 0; text-align: center; font-weight: 700; }
+  .stepper input:focus-visible { outline: 0; background: var(--blue-50); }
+
+  /* ---- 注文パネル（濃紺） ---- */
+  .order-panel {
+    position: sticky; top: 16px;
+    background: linear-gradient(165deg, var(--navy) 0%, var(--blue-900) 45%, var(--blue-700) 100%);
+    color: #fff; border: 0;
+    box-shadow: 0 18px 40px rgba(11, 37, 69, .35);
+  }
+  @media (max-width: 860px) { .order-panel { position: static; } }
+  .order-panel h2 { color: #fff; }
+  .order-panel h2::before { background: linear-gradient(180deg, var(--dawn), #ffd6a8); }
+  .count-badge { padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,.14); color: var(--blue-100); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 6px; text-align: left; }
+  th { font-size: 12px; letter-spacing: .05em; font-weight: 700; }
+  .order-panel th { color: var(--blue-200); border-bottom: 1px solid rgba(255,255,255,.18); }
+  .order-panel td { border-bottom: 1px solid rgba(255,255,255,.10); }
+  .order-panel tbody tr:hover td { background: rgba(255,255,255,.05); }
+  .order-actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .order-actions button { padding: 3px 10px; font-size: 12px; background: transparent; color: var(--blue-100); border-color: rgba(255,255,255,.28); }
+  .order-actions button:hover:not(:disabled) { background: rgba(255,255,255,.14); border-color: #fff; color: #fff; }
+  .order-empty { margin: 12px 0 4px; padding: 22px 12px; text-align: center; line-height: 1.8; color: var(--blue-200); border: 1px dashed rgba(255,255,255,.25); border-radius: 12px; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; margin: 18px 0 16px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,.3); }
+  .total .label { color: var(--blue-200); font-size: 15px; letter-spacing: .1em; }
+  .total .num { font-size: 32px; font-weight: 800; }
+  #checkout-btn {
+    width: 100%; padding: 16px; font-size: 20px; letter-spacing: .3em; border-radius: 14px;
+    background: linear-gradient(90deg, var(--blue-500) 0%, #5aa2ff 100%);
+    box-shadow: 0 10px 26px rgba(59, 125, 221, .55);
+  }
+  #checkout-btn:disabled { box-shadow: none; }
+
+  /* ---- ダイアログ ---- */
+  dialog {
+    border: 0; border-radius: 22px; padding: 0;
+    width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+    background: #fff; color: var(--text);
+    box-shadow: 0 30px 80px rgba(11, 37, 69, .40);
+  }
+  dialog::backdrop { background: rgba(11, 37, 69, .55); backdrop-filter: blur(3px); }
+  .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; background: var(--grad-deep); color: #fff; }
+  .dialog-head h2 { margin: 0; font-size: 18px; letter-spacing: .05em; }
+  .dialog-head button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
+  .dialog-head button:hover:not(:disabled) { background: rgba(255,255,255,.24); }
+  .dialog-body { padding: 22px; overflow: auto; }
+  .dialog-body th { color: var(--blue-700); background: var(--blue-50); }
+  .dialog-body td { border-bottom: 1px solid var(--line); }
+  .dialog-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 0 22px 22px; }
+  .dialog-foot button { padding: 10px 22px; }
+  #checkout-dialog { width: min(540px, calc(100vw - 32px)); }
+  .big-total { text-align: center; margin: 22px 0 6px; padding: 18px; border-radius: 16px; background: linear-gradient(135deg, var(--blue-50), var(--blue-100)); color: var(--blue-900); font-size: 34px; font-weight: 800; }
+  .done { text-align: center; line-height: 1.9; font-size: 17px; color: var(--blue-900); }
+
+  .field { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .field > span, .field > label { font-weight: 700; color: var(--blue-900); }
+  @media (max-width: 560px) { .field { grid-template-columns: 1fr; } }
+  .choices { display: flex; flex-wrap: wrap; gap: 6px; }
+  .choices label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--blue-200); background: #fff; color: var(--blue-800); }
+  .choices label:has(input:checked) { background: var(--blue-100); border-color: var(--blue-500); font-weight: 700; }
+  .choices input { accent-color: var(--blue-600); margin: 0; }
+  .rec-list { list-style: none; margin: 14px 0 0; padding: 0; }
+  .rec-item {
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px 12px; align-items: center;
+    padding: 14px 16px; margin-bottom: 10px; border-radius: 14px;
+    background: linear-gradient(90deg, var(--blue-50), #fff);
+    border: 1px solid var(--line); border-left: 5px solid var(--blue-500);
+  }
+  .rec-item strong { color: var(--navy); }
+  .rec-item .reasons { grid-column: 1 / -1; font-size: 13px; color: var(--blue-700); }
+  .rec-item .error { grid-column: 1 / -1; }
+  .rec-item .error:empty { display: none; }
+  @media (max-width: 560px) { .rec-item { grid-template-columns: 1fr auto; } }
+
+  .history-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .kpis { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  .kpi { flex: 1 1 160px; border-radius: 14px; padding: 14px 16px; background: var(--grad-deep); color: #fff; box-shadow: 0 8px 20px rgba(29, 78, 137, .25); }
+  .kpi .label { font-size: 12px; letter-spacing: .08em; color: var(--blue-200); }
+  .kpi .value { font-size: 24px; font-weight: 800; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr; } }
+  .summary-grid h3 { font-size: 15px; margin: 0 0 8px; color: var(--blue-900); }
+  .table-wrap { overflow-x: auto; }
+  .order-card { border: 1px solid var(--line); border-left: 5px solid var(--blue-500); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; background: linear-gradient(90deg, var(--blue-50), #fff); }
+  .order-card .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-weight: 700; color: var(--blue-900); }
+  .order-card td { border-bottom: 0; padding: 3px 6px; background: transparent; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 10px);
+    background: var(--grad-deep); color: #fff; padding: 11px 22px; border-radius: 999px;
+    box-shadow: 0 10px 26px rgba(11, 37, 69, .35);
+    opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 560px) {
+    header { padding: 22px 18px 48px; }
+    header h1 { font-size: 26px; }
+    .panel { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="en">BLUE ALBA</span>
+    <h1 id="store-name"></h1>
+    <span class="dawn-line"></span>
+  </div>
+  <nav>
+    <button id="open-recommend" type="button">おすすめを聞く</button>
+    <button id="open-history" type="button">注文履歴・集計</button>
+  </nav>
+</header>
+
+<main>
+  <section class="panel" aria-labelledby="menu-title">
+    <div class="panel-head"><h2 id="menu-title">メニュー</h2></div>
+    <div class="tabs" id="category-tabs" role="tablist"></div>
+    <ul class="menu-list" id="menu-list"></ul>
+  </section>
+
+  <section class="panel order-panel" aria-labelledby="order-title">
+    <div class="panel-head"><h2 id="order-title">ご注文内容</h2><span class="count-badge" id="order-count"></span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>品名</th><th class="num">数量</th><th class="num">小計</th><th></th></tr></thead>
+        <tbody id="order-lines"></tbody>
+      </table>
+    </div>
+    <p class="order-empty" id="order-empty">注文はまだありません。<br>メニューから追加してください。</p>
+    <div class="total"><span class="label">合計</span><span class="num" id="order-total"></span></div>
+    <button id="checkout-btn" class="primary" type="button">会計</button>
+  </section>
+</main>
+
+<dialog id="checkout-dialog" aria-labelledby="checkout-title">
+  <div class="dialog-head"><h2 id="checkout-title">お会計</h2></div>
+  <div class="dialog-body" id="checkout-body"></div>
+  <div class="dialog-foot" id="checkout-foot"></div>
+</dialog>
+
+<dialog id="recommend-dialog" aria-labelledby="recommend-title">
+  <div class="dialog-head"><h2 id="recommend-title">おすすめ</h2><button type="button" data-close>閉じる</button></div>
+  <div class="dialog-body">
+    <div class="field"><span>気分</span><div class="choices" id="mood-choices"></div></div>
+    <div class="field"><span>温度</span><div class="choices" id="temperature-choices"></div></div>
+    <div class="field">
+      <label for="budget">1品あたりの予算</label>
+      <div><input type="text" id="budget" inputmode="numeric" size="7"> 円 <span class="muted">（空欄で指定なし）</span></div>
+    </div>
+    <div class="field">
+      <label for="age">年齢</label>
+      <div><input type="text" id="age" inputmode="numeric" size="4"> 歳 <span class="muted" id="age-note"></span></div>
+    </div>
+    <div class="error" id="recommend-error" role="alert"></div>
+    <p class="muted" id="recommend-empty" hidden>条件に合うおすすめが見つかりませんでした。条件を変えてお試しください。</p>
+    <ul class="rec-list" id="recommend-list"></ul>
+  </div>
+</dialog>
+
+<dialog id="history-dialog" aria-labelledby="history-title">
+  <div class="dialog-head"><h2 id="history-title">注文履歴・集計</h2><button type="button" data-close>閉じる</button></div>
+  <div class="dialog-body">
+    <div class="history-toolbar">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-history-tab="list" aria-selected="true">注文一覧</button>
+        <button type="button" role="tab" data-history-tab="summary" aria-selected="false">売上集計</button>
+      </div>
+      <button type="button" id="download-csv">CSVをダウンロード</button>
+    </div>
+    <div id="history-content"></div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+// ===== データ（menu.py と同じ内容） =====
+
+const STORE_NAME = "ブルー・アルバ";
+
+// [カテゴリ名, [[品名, 価格(円・税込)], ...]]
+const MENU = [
+  ["コーヒー", [
+    ["ブレンドコーヒー", 480], ["アメリカーノ", 500], ["カフェラテ", 580],
+    ["カプチーノ", 580], ["カフェモカ", 620], ["アイスコーヒー", 480],
+  ]],
+  ["ティー・ソフトドリンク", [
+    ["ダージリンティー", 520], ["アールグレイ", 520], ["抹茶ラテ", 600],
+    ["オレンジジュース", 450], ["自家製レモネード", 550],
+  ]],
+  ["フード", [
+    ["ミックスサンドイッチ", 780], ["BLTサンド", 850], ["ナポリタン", 980],
+    ["カルボナーラ", 1080], ["オムライス", 1050], ["本日のスープセット", 680],
+  ]],
+  ["デザート", [
+    ["ベイクドチーズケーキ", 550], ["ガトーショコラ", 550], ["自家製プリン", 480],
+    ["フレンチトースト", 750], ["バニラアイス", 380],
+  ]],
+];
+
+// 品名 -> おすすめ判定用のタグ（気分・温度・カフェイン）
+const ITEM_TAGS = {
+  "ブレンドコーヒー": ["カフェイン", "温かい", "すっきり"],
+  "アメリカーノ": ["カフェイン", "温かい", "すっきり"],
+  "カフェラテ": ["カフェイン", "温かい"],
+  "カプチーノ": ["カフェイン", "温かい"],
+  "カフェモカ": ["カフェイン", "温かい", "甘い"],
+  "アイスコーヒー": ["カフェイン", "冷たい", "すっきり"],
+  "ダージリンティー": ["カフェイン", "温かい", "すっきり"],
+  "アールグレイ": ["カフェイン", "温かい", "すっきり"],
+  "抹茶ラテ": ["カフェイン", "温かい", "甘い"],
+  "オレンジジュース": ["冷たい", "すっきり"],
+  "自家製レモネード": ["冷たい", "すっきり"],
+  "ミックスサンドイッチ": ["軽め"],
+  "BLTサンド": ["軽め"],
+  "ナポリタン": ["温かい", "しっかり"],
+  "カルボナーラ": ["温かい", "しっかり"],
+  "オムライス": ["温かい", "しっかり"],
+  "本日のスープセット": ["温かい", "軽め"],
+  "ベイクドチーズケーキ": ["甘い"],
+  "ガトーショコラ": ["甘い"],
+  "自家製プリン": ["冷たい", "甘い"],
+  "フレンチトースト": ["温かい", "甘い"],
+  "バニラアイス": ["冷たい", "甘い", "軽め"],
+};
+
+const PRICES = Object.fromEntries(MENU.flatMap(([, items]) => items));
+
+function categoryOf(name) {
+  const found = MENU.find(([, items]) => items.some(([itemName]) => itemName === name));
+  return found ? found[0] : "その他";
+}
+
+function formatPrice(price) {
+  return "¥" + price.toLocaleString("ja-JP");
+}
+
+// ===== 入力チェック（validation.py と同じルール） =====
+
+const AGE_MIN = 0, AGE_MAX = 120, BUDGET_MAX = 100000;
+
+class InputError extends Error {}
+
+/** 入力文字列を整数に変換する。全角数字も可。不正なら理由付きの InputError。 */
+function parseIntInput(text, label, minimum = null, maximum = null, required = true) {
+  const s = String(text ?? "").normalize("NFKC").trim();
+  if (s === "") {
+    if (required) throw new InputError(`${label}を入力してください。`);
+    return null;
+  }
+  if (/^-?(\d+\.\d*|\.\d+)$/.test(s)) throw new InputError(`${label}は整数で入力してください。`);
+  if (!/^-?\d+$/.test(s)) throw new InputError(`${label}は数字で入力してください。`);
+  const value = Number(s) || 0;  // "-0" を 0 にそろえる
+  if (value < 0 && (minimum === null || minimum >= 0)) throw new InputError(`${label}にマイナスの値は入力できません。`);
+  if ((minimum !== null && value < minimum) || (maximum !== null && value > maximum)) {
+    throw new InputError(`${label}は${minimum}〜${maximum}の範囲で入力してください。`);
+  }
+  return value;
+}
+const parseAge = (text) => parseIntInput(text, "年齢", AGE_MIN, AGE_MAX, false);
+const parseBudget = (text) => parseIntInput(text, "予算", 0, BUDGET_MAX, false);
+
+// ===== 注文（order.py と同じルール） =====
+
+class OrderError extends Error {}
+
+class Order {
+  static MAX_QUANTITY = 99;
+
+  constructor() {
+    this.lines = [];  // [{name, price, quantity}]（同じ品は1行にまとめる）
+    this.checkedOut = false;
+  }
+
+  ensureOpen() {
+    if (this.checkedOut) throw new OrderError("会計済みの注文は変更できません。");
+  }
+
+  add(name, price, quantity) {
+    this.ensureOpen();
+    if (!(quantity >= 1 && quantity <= Order.MAX_QUANTITY)) {
+      throw new OrderError(`数量は1〜${Order.MAX_QUANTITY}で指定してください。`);
+    }
+    const line = this.lines.find((l) => l.name === name);
+    if (line) {
+      if (line.quantity + quantity > Order.MAX_QUANTITY) {
+        throw new OrderError(`1品あたりの数量は${Order.MAX_QUANTITY}までです。`);
+      }
+      line.quantity += quantity;
+    } else {
+      this.lines.push({ name, price, quantity });
+    }
+  }
+
+  /** 明細 index を取り消す。quantity 省略時はその品をすべて取り消す。 */
+  cancel(index, quantity = null) {
+    this.ensureOpen();
+    const line = this.lines[index];
+    if (!line) throw new OrderError("指定された注文がありません。");
+    if (quantity === null || quantity >= line.quantity) {
+      this.lines.splice(index, 1);
+    } else {
+      line.quantity -= quantity;
+    }
+  }
+
+  total() {
+    return this.lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
+  }
+
+  isEmpty() {
+    return this.lines.length === 0;
+  }
+
+  checkout() {
+    this.ensureOpen();
+    if (this.isEmpty()) throw new OrderError("注文がありません。");
+    this.checkedOut = true;
+    return this.total();
+  }
+}
+
+// ===== 注文記録（records.py 相当。保存先はブラウザの localStorage） =====
+
+const STORAGE_KEY = "blue-alba-orders";
+const CSV_HEADER = ["注文ID", "日時", "品名", "単価", "数量", "小計", "注文合計"];
+
+/** 記録された注文を古い順に返す。壊れたデータは読み飛ばす。読めなければ例外。 */
+function loadOrders() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((o) => o && typeof o.id === "string" && typeof o.orderedAt === "string" && Array.isArray(o.lines))
+    .map((o) => {
+      const lines = o.lines.filter((l) => l && typeof l.name === "string"
+        && Number.isInteger(l.price) && Number.isInteger(l.quantity));
+      return { id: o.id, orderedAt: o.orderedAt, lines, total: lines.reduce((s, l) => s + l.price * l.quantity, 0) };
+    })
+    .filter((o) => o.lines.length > 0);
+}
+
+/** 注文を記録して注文ID（YYYYMMDD-HHMMSS）を返す。保存できなければ例外。 */
+function saveOrder(order) {
+  const now = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  const ymd = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`;
+  const hms = `${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
+  const record = {
+    id: `${ymd}-${hms}`,
+    orderedAt: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`,
+    lines: order.lines.map((l) => ({ ...l })),
+  };
+  const orders = loadOrders();
+  orders.push(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders.map(({ total, ...rest }) => rest)));
+  return record.id;
+}
+
+function loadItemSales() {
+  const sales = {};
+  try {
+    for (const order of loadOrders()) {
+      for (const l of order.lines) sales[l.name] = (sales[l.name] || 0) + l.quantity;
+    }
+  } catch {
+    // 読めなければ人気は考慮しない
+  }
+  return sales;
+}
+
+function summarize(orders) {
+  const byDate = new Map(), byItem = new Map(), byCategory = new Map();
+  const bump = (map, key, quantity, sales) => {
+    const d = map.get(key) || { quantity: 0, sales: 0, orders: 0 };
+    d.quantity += quantity;
+    d.sales += sales;
+    map.set(key, d);
+    return d;
+  };
+  for (const order of orders) {
+    bump(byDate, order.orderedAt.slice(0, 10), 0, order.total).orders += 1;
+    for (const l of order.lines) {
+      const subtotal = l.price * l.quantity;
+      bump(byItem, l.name, l.quantity, subtotal);
+      bump(byCategory, categoryOf(l.name), l.quantity, subtotal);
+    }
+  }
+  const totalSales = orders.reduce((s, o) => s + o.total, 0);
+  const bySales = (map) => [...map.entries()].sort((a, b) => b[1].sales - a[1].sales);
+  return {
+    orderCount: orders.length,
+    totalSales,
+    average: orders.length ? Math.floor(totalSales / orders.length) : 0,
+    byDate: [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+    byItem: bySales(byItem),
+    byCategory: bySales(byCategory),
+  };
+}
+
+/** Python 版の data/orders.csv と同じ形式（BOM 付き UTF-8）の CSV 文字列。 */
+function ordersToCsv(orders) {
+  const cell = (v) => {
+    const s = String(v);
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [CSV_HEADER];
+  for (const o of orders) {
+    for (const l of o.lines) rows.push([o.id, o.orderedAt, l.name, l.price, l.quantity, l.price * l.quantity, o.total]);
+  }
+  return "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+}
+
+// ===== おすすめ（recommend.py と同じルール） =====
+
+const MOODS = [["甘いもの", "甘い"], ["しっかり食べたい", "しっかり"], ["軽めに", "軽め"], ["すっきりしたい", "すっきり"]];
+const TEMPERATURES = [["温かいもの", "温かい"], ["冷たいもの", "冷たい"]];
+const OPPOSITE_TEMPERATURE = { "温かい": "冷たい", "冷たい": "温かい" };
+const CAFFEINE_TAG = "カフェイン";
+const CHILD_AGE = 12;
+
+function recommend({ sales, mood = null, temperature = null, budget = null, age = null, limit = 3 }) {
+  const isChild = age !== null && age <= CHILD_AGE;
+  const candidates = [];
+  for (const [category, items] of MENU) {
+    for (const [name, price] of items) {
+      const tags = new Set(ITEM_TAGS[name] || []);
+      if (mood && !tags.has(mood)) continue;
+      if (temperature && tags.has(OPPOSITE_TEMPERATURE[temperature])) continue;
+      if (budget !== null && price > budget) continue;
+      if (isChild && tags.has(CAFFEINE_TAG)) continue;
+      candidates.push({ name, price, category, tags, order: candidates.length });
+    }
+  }
+  // 温度一致 → 販売数が多い → メニュー順
+  candidates.sort((a, b) =>
+    (Number(b.tags.has(temperature)) - Number(a.tags.has(temperature)))
+    || ((sales[b.name] || 0) - (sales[a.name] || 0))
+    || (a.order - b.order));
+
+  const moodLabel = Object.fromEntries(MOODS.map(([label, tag]) => [tag, label]));
+  return candidates.slice(0, limit).map(({ name, price, category, tags }) => {
+    const reasons = [];
+    if (mood) reasons.push(`気分「${moodLabel[mood]}」にぴったり`);
+    if (temperature && tags.has(temperature)) reasons.push(`${temperature}品`);
+    if (isChild) reasons.push("お子さまにも安心（カフェインなし）");
+    if ((sales[name] || 0) > 0) reasons.push(`人気（これまでに${sales[name]}個）`);
+    return { name, price, category, reasons };
+  });
+}
+
+// ===== 画面 =====
+
+/** 要素を作る小さなヘルパー。文字列は textContent として入れる（HTML として解釈しない）。 */
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else if (key in node) node[key] = value;
+    else node.setAttribute(key, value);
+  }
+  for (const child of children.flat()) {
+    if (child !== null && child !== undefined) node.append(child instanceof Node ? child : String(child));
+  }
+  return node;
+}
+
+const $ = (id) => document.getElementById(id);
+let order = new Order();
+let currentCategory = 0;
+
+function toast(message) {
+  const t = $("toast");
+  t.textContent = message;
+  t.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/** 数量文字列をチェックして注文に追加する。成功なら null、失敗ならエラーメッセージ。 */
+function addToOrder(name, quantityText) {
+  try {
+    const quantity = parseIntInput(quantityText, "数量", 1, Order.MAX_QUANTITY);
+    order.add(name, PRICES[name], quantity);
+  } catch (e) {
+    if (e instanceof InputError || e instanceof OrderError) return e.message;
+    throw e;
+  }
+  renderOrder();
+  toast(`${name} を追加しました`);
+  return null;
+}
+
+function renderTabs() {
+  const tabs = $("category-tabs");
+  tabs.replaceChildren(...MENU.map(([category], i) => el("button", {
+    type: "button", role: "tab", "aria-selected": String(i === currentCategory),
+    onclick: () => { currentCategory = i; renderTabs(); renderMenu(); },
+  }, category)));
+}
+
+/** 数量入力欄と −／＋ ボタン。入力欄は直接入力もでき、値のチェックは追加時に行う。 */
+function quantityStepper(name, onEnter) {
+  const input = el("input", { type: "text", class: "qty", value: "1", inputMode: "numeric", "aria-label": `${name} の数量` });
+  const step = (delta) => {
+    let value;
+    try {
+      value = parseIntInput(input.value, "数量", 1, Order.MAX_QUANTITY);
+    } catch {
+      value = 1 - delta;  // 不正な値のときは 1 に戻す
+    }
+    input.value = String(Math.min(Order.MAX_QUANTITY, Math.max(1, value + delta)));
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") onEnter(); });
+  const stepper = el("div", { class: "stepper" },
+    el("button", { type: "button", "aria-label": "1つ減らす", onclick: () => step(-1) }, "−"),
+    input,
+    el("button", { type: "button", "aria-label": "1つ増やす", onclick: () => step(1) }, "＋"));
+  return { stepper, input };
+}
+
+function renderMenu() {
+  const [, items] = MENU[currentCategory];
+  $("menu-list").replaceChildren(...items.map(([name, price]) => {
+    const error = el("span", { class: "error", role: "alert" });
+    const add = () => { error.textContent = addToOrder(name, input.value) || ""; };
+    const { stepper, input } = quantityStepper(name, add);
+    return el("li", { class: "menu-item" },
+      el("span", { class: "name" }, name),
+      el("span", { class: "price-chip" }, formatPrice(price)),
+      stepper,
+      el("button", { type: "button", class: "add primary", onclick: add }, "追加"),
+      error);
+  }));
+}
+
+function renderOrder() {
+  $("order-lines").replaceChildren(...order.lines.map((line, i) => el("tr", {},
+    el("td", {}, line.name),
+    el("td", { class: "num" }, line.quantity),
+    el("td", { class: "num" }, formatPrice(line.price * line.quantity)),
+    el("td", {}, el("div", { class: "order-actions" },
+      el("button", { type: "button", onclick: () => { order.cancel(i, 1); renderOrder(); } }, "1個取消"),
+      el("button", { type: "button", onclick: () => { order.cancel(i); renderOrder(); } }, "取消"))))));
+  $("order-empty").hidden = !order.isEmpty();
+  const count = order.lines.reduce((sum, l) => sum + l.quantity, 0);
+  $("order-count").textContent = `${count}点`;
+  $("order-total").textContent = formatPrice(order.total());
+  $("checkout-btn").disabled = order.isEmpty();
+}
+
+// ---- 会計 ----
+
+function openCheckout() {
+  if (order.isEmpty()) return;
+  const rows = order.lines.map((l) => el("tr", {},
+    el("td", {}, l.name), el("td", { class: "num" }, l.quantity), el("td", { class: "num" }, formatPrice(l.price * l.quantity))));
+  $("checkout-body").replaceChildren(
+    el("div", { class: "table-wrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, el("th", {}, "品名"), el("th", { class: "num" }, "数量"), el("th", { class: "num" }, "小計"))),
+      el("tbody", {}, rows))),
+    el("div", { class: "big-total" }, `合計金額 ${formatPrice(order.total())}`),
+    el("p", { class: "error", id: "checkout-error", role: "alert" }));
+  $("checkout-foot").replaceChildren(
+    el("button", { type: "button", onclick: () => $("checkout-dialog").close() }, "戻る"),
+    el("button", { type: "button", class: "primary", onclick: confirmCheckout }, "会計を確定する"));
+  $("checkout-dialog").showModal();
+}
+
+function confirmCheckout() {
+  // 記録できなかった注文を会計済みにしないよう、記録を先に行う
+  let orderId;
+  try {
+    orderId = saveOrder(order);
+  } catch (e) {
+    $("checkout-error").textContent =
+      `注文を記録できませんでした（${e.message}）。ブラウザの保存設定を確認して、もう一度お試しください。`;
+    return;
+  }
+  const total = order.checkout();
+  $("checkout-body").replaceChildren(el("div", { class: "done" },
+    el("div", { class: "big-total" }, `お会計 ${formatPrice(total)}`),
+    el("div", {}, `注文ID ${orderId} として記録しました。`),
+    el("div", {}, "ありがとうございました。")));
+  $("checkout-foot").replaceChildren(el("button", { type: "button", class: "primary", onclick: () => $("checkout-dialog").close() }, "次の注文へ"));
+  order = new Order();
+  renderOrder();
+}
+
+// ---- おすすめ ----
+
+let recommendSales = {};
+
+function setupRecommend() {
+  const radios = (containerId, name, options) => {
+    $(containerId).replaceChildren(...[["こだわらない", ""], ...options].map(([label, value]) => el("label", {},
+      el("input", { type: "radio", name, value, checked: value === "", onchange: renderRecommend }), label)));
+  };
+  radios("mood-choices", "mood", MOODS);
+  radios("temperature-choices", "temperature", TEMPERATURES);
+  $("budget").addEventListener("input", renderRecommend);
+  $("age").addEventListener("input", renderRecommend);
+  $("age-note").textContent = `（空欄で指定なし・${CHILD_AGE}歳以下はカフェインなしの品をおすすめ）`;
+}
+
+function openRecommend() {
+  recommendSales = loadItemSales();
+  renderRecommend();
+  $("recommend-dialog").showModal();
+}
+
+function renderRecommend() {
+  const checked = (name) => document.querySelector(`input[name="${name}"]:checked`).value || null;
+  const errors = [];
+  let budget = null, age = null;
+  try { budget = parseBudget($("budget").value); } catch (e) { errors.push(e.message); }
+  try { age = parseAge($("age").value); } catch (e) { errors.push(e.message); }
+  // 入力に誤りがある間は、おすすめを出さずに理由だけを表示する
+  $("recommend-error").textContent = errors.join("　");
+  const results = errors.length ? [] : recommend({
+    sales: recommendSales, mood: checked("mood"), temperature: checked("temperature"), budget, age,
+  });
+  $("recommend-empty").hidden = errors.length > 0 || results.length > 0;
+  $("recommend-list").replaceChildren(...results.map((r) => {
+    const error = el("span", { class: "error", role: "alert" });
+    const add = () => { error.textContent = addToOrder(r.name, input.value) || ""; };
+    const { stepper, input } = quantityStepper(r.name, add);
+    return el("li", { class: "rec-item" },
+      el("strong", {}, r.name),
+      el("span", { class: "price-chip" }, formatPrice(r.price)),
+      stepper,
+      el("button", { type: "button", class: "add primary", onclick: add }, "注文に追加"),
+      el("span", { class: "reasons" }, `${r.category}｜${r.reasons.join(" / ") || "おすすめ"}`),
+      error);
+  }));
+}
+
+// ---- 注文履歴・集計 ----
+
+let historyTab = "list";
+
+function openHistory() {
+  renderHistory();
+  $("history-dialog").showModal();
+}
+
+function renderHistory() {
+  for (const b of document.querySelectorAll("[data-history-tab]")) {
+    b.setAttribute("aria-selected", String(b.dataset.historyTab === historyTab));
+  }
+  const content = $("history-content");
+  let orders;
+  try {
+    orders = loadOrders();
+  } catch (e) {
+    content.replaceChildren(el("p", { class: "error" }, `注文記録を読み込めませんでした（${e.message}）。`));
+    $("download-csv").disabled = true;
+    return;
+  }
+  $("download-csv").disabled = orders.length === 0;
+  if (orders.length === 0) {
+    content.replaceChildren(el("p", { class: "muted" }, "記録された注文はまだありません。"));
+    return;
+  }
+  content.replaceChildren(...(historyTab === "list" ? renderOrderList(orders) : renderSummary(orders)));
+}
+
+function renderOrderList(orders) {
+  return [
+    el("p", { class: "muted" }, `${orders.length}件（古い順）`),
+    ...orders.map((o) => el("div", { class: "order-card" },
+      el("div", { class: "head" }, el("span", {}, `[${o.id}] ${o.orderedAt}`), el("span", {}, `合計 ${formatPrice(o.total)}`)),
+      el("table", {}, el("tbody", {}, o.lines.map((l) => el("tr", {},
+        el("td", {}, l.name), el("td", { class: "num" }, `x${l.quantity}`), el("td", { class: "num" }, formatPrice(l.price * l.quantity)))))))),
+  ];
+}
+
+function renderSummary(orders) {
+  const s = summarize(orders);
+  const kpi = (label, value) => el("div", { class: "kpi" }, el("div", { class: "label" }, label), el("div", { class: "value" }, value));
+  const table = (headers, rows) => el("div", { class: "table-wrap" }, el("table", {},
+    el("thead", {}, el("tr", {}, headers.map(([h, cls]) => el("th", { class: cls || "" }, h)))),
+    el("tbody", {}, rows.map((cells) => el("tr", {}, cells.map(([v, cls]) => el("td", { class: cls || "" }, v)))))));
+  const ranking = (title, nameHeading, rows) => el("section", {}, el("h3", {}, title), table(
+    [["順位", "num"], [nameHeading], ["個数", "num"], ["売上", "num"]],
+    rows.map(([name, d], i) => [[i + 1, "num"], [name], [d.quantity, "num"], [formatPrice(d.sales), "num"]])));
+  return [
+    el("div", { class: "kpis" },
+      kpi("注文件数", `${s.orderCount}件`), kpi("売上合計", formatPrice(s.totalSales)), kpi("平均客単価", formatPrice(s.average))),
+    el("div", { class: "summary-grid" },
+      el("div", {},
+        el("section", {}, el("h3", {}, "日別売上"), table(
+          [["日付"], ["件数", "num"], ["売上", "num"]],
+          s.byDate.map(([date, d]) => [[date], [d.orders, "num"], [formatPrice(d.sales), "num"]]))),
+        el("br"),
+        ranking("カテゴリ別売上", "カテゴリ", s.byCategory)),
+      ranking("品目別売上ランキング", "品名", s.byItem)),
+  ];
+}
+
+function downloadCsv() {
+  let orders;
+  try {
+    orders = loadOrders();
+  } catch (e) {
+    toast("注文記録を読み込めませんでした");
+    return;
+  }
+  const blob = new Blob([ordersToCsv(orders)], { type: "text/csv" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "orders.csv" });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---- 起動 ----
+
+document.title = `${STORE_NAME} 注文システム`;
+$("store-name").textContent = STORE_NAME;
+$("checkout-btn").addEventListener("click", openCheckout);
+$("open-recommend").addEventListener("click", openRecommend);
+$("open-history").addEventListener("click", openHistory);
+$("download-csv").addEventListener("click", downloadCsv);
+for (const b of document.querySelectorAll("[data-history-tab]")) {
+  b.addEventListener("click", () => { historyTab = b.dataset.historyTab; renderHistory(); });
+}
+for (const b of document.querySelectorAll("[data-close]")) {
+  b.addEventListener("click", () => b.closest("dialog").close());
+}
+setupRecommend();
+renderTabs();
+renderMenu();
+renderOrder();
+</script>
+</body>
+</html>
