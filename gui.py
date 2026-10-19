@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from menu import ITEM_TAGS, MENU, STORE_NAME, category_of, format_price
+from menu import ALLERGENS, ITEM_TAGS, MENU, STORE_NAME, category_of, filter_menu, format_allergens, format_price
 from order import Order, OrderError
 from recommend import CHILD_AGE, MOODS, TEMPERATURES, recommend
 from records import load_item_sales, load_orders, save_order, summarize
@@ -71,16 +71,18 @@ class App(tk.Tk):
 
     def _build_menu_panel(self, parent):
         panel = ttk.LabelFrame(parent, text="メニュー", padding=8)
+        self._build_allergen_bar(panel).pack(fill="x", pady=(0, 8))
         self.notebook = ttk.Notebook(panel)
         self.notebook.pack(fill="both", expand=True)
         self.menu_trees = []
-        for category, items in MENU.items():
-            frame, tree = make_tree(self.notebook, [("name", "品名", 240, "w"), ("price", "価格", 100, "e")])
-            for name, price in items:
-                tree.insert("", "end", iid=name, values=(name, format_price(price)))
+        for category in MENU:
+            frame, tree = make_tree(
+                self.notebook, [("name", "品名", 200, "w"), ("allergens", "アレルギー", 140, "w"), ("price", "価格", 90, "e")]
+            )
             tree.bind("<Double-1>", lambda _e: self.add_selected())
             self.notebook.add(frame, text=category)
             self.menu_trees.append(tree)
+        self.refresh_menu()
 
         controls = ttk.Frame(panel, padding=(0, 8, 0, 0))
         controls.pack(fill="x")
@@ -90,6 +92,52 @@ class App(tk.Tk):
         ttk.Button(controls, text="注文に追加", command=self.add_selected).pack(side="left")
         ttk.Label(controls, text="（ダブルクリックでも追加できます）").pack(side="left", padx=8)
         return panel
+
+    def _build_allergen_bar(self, parent):
+        """押したアレルギーを含む料理を、メニューとおすすめから隠すトグルボタン群。"""
+        bar = ttk.Frame(parent)
+        ttk.Label(bar, text="アレルギーで絞り込む（押した項目を含む料理を隠す）").pack(anchor="w")
+        buttons = ttk.Frame(bar)
+        buttons.pack(fill="x", pady=(4, 0))
+        self.allergen_vars = {}
+        for allergen in ALLERGENS:
+            var = tk.BooleanVar(value=False)
+            ttk.Checkbutton(buttons, text=allergen, variable=var, style="Toolbutton",
+                            command=self.on_allergen_change).pack(side="left", padx=(0, 4))
+            self.allergen_vars[allergen] = var
+        ttk.Button(buttons, text="すべて解除", command=self.clear_allergens).pack(side="left", padx=(8, 0))
+        self.allergen_status = ttk.Label(bar, style="Hint.TLabel")
+        self.allergen_status.pack(anchor="w", pady=(4, 0))
+        return bar
+
+    def excluded_allergens(self):
+        return {allergen for allergen, var in self.allergen_vars.items() if var.get()}
+
+    def clear_allergens(self):
+        for var in self.allergen_vars.values():
+            var.set(False)
+        self.on_allergen_change()
+
+    def on_allergen_change(self):
+        self.refresh_menu()
+        for window in self.winfo_children():
+            if isinstance(window, RecommendWindow):
+                window.update_results()
+
+    def refresh_menu(self):
+        excluded = self.excluded_allergens()
+        visible = filter_menu(MENU, excluded)
+        hidden_total = 0
+        for index, (category, tree) in enumerate(zip(MENU, self.menu_trees)):
+            tree.delete(*tree.get_children())
+            for name, price in visible[category]:
+                tree.insert("", "end", iid=name, values=(name, format_allergens(name), format_price(price)))
+            hidden = len(MENU[category]) - len(visible[category])
+            hidden_total += hidden
+            self.notebook.tab(index, text=f"{category}（{len(visible[category])}）" if hidden else category)
+        self.allergen_status.configure(
+            text=f"{'・'.join(a for a in ALLERGENS if a in excluded)} を含む {hidden_total}品を非表示中" if excluded else ""
+        )
 
     def _build_order_panel(self, parent):
         panel = ttk.LabelFrame(parent, text="ご注文内容", padding=8)
@@ -243,7 +291,7 @@ class RecommendWindow(tk.Toplevel):
         super().__init__(app)
         self.app = app
         self.title("おすすめ")
-        self.geometry("900x540")
+        self.geometry("960x560")
         self.transient(app)
         self.sales = load_item_sales()
 
@@ -260,9 +308,12 @@ class RecommendWindow(tk.Toplevel):
         self._entry_row(body, "年齢", self.age, f"歳（空欄で指定なし・{CHILD_AGE}歳以下はカフェインなしの品をおすすめ）")
         self.hint = ttk.Label(body, style="Hint.TLabel")
         self.hint.pack(fill="x")
+        self.allergen_note = ttk.Label(body)
+        self.allergen_note.pack(fill="x")
 
         frame, self.tree = make_tree(
-            body, [("name", "品名", 170, "w"), ("price", "価格", 80, "e"), ("category", "カテゴリ", 150, "w"), ("reason", "おすすめの理由", 440, "w")],
+            body, [("name", "品名", 160, "w"), ("price", "価格", 70, "e"), ("category", "カテゴリ", 140, "w"),
+                   ("allergens", "アレルギー", 110, "w"), ("reason", "おすすめの理由", 380, "w")],
             height=6,
         )
         frame.pack(fill="both", expand=True, pady=(12, 8))
@@ -313,15 +364,21 @@ class RecommendWindow(tk.Toplevel):
         if errors:
             self.empty_label.configure(text="")
             return
+        excluded = self.app.excluded_allergens()
+        self.allergen_note.configure(
+            text=f"アレルギー {'・'.join(a for a in ALLERGENS if a in excluded)} を含む料理はおすすめしません（メイン画面で変更）"
+            if excluded else ""
+        )
         results = recommend(
-            MENU, ITEM_TAGS, self.sales,
+            filter_menu(MENU, excluded), ITEM_TAGS, self.sales,
             mood=self.mood.get() or None,
             temperature=self.temperature.get() or None,
             budget=budget,
             age=age,
         )
         for r in results:
-            self.tree.insert("", "end", iid=r["name"], values=(r["name"], format_price(r["price"]), r["category"], " / ".join(r["reasons"])))
+            self.tree.insert("", "end", iid=r["name"], values=(
+                r["name"], format_price(r["price"]), r["category"], format_allergens(r["name"]), " / ".join(r["reasons"])))
         if results:
             self.tree.selection_set(results[0]["name"])
             self.empty_label.configure(text="")

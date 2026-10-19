@@ -1,6 +1,9 @@
 """コンソール版の画面。`python main.py --cli` で起動する。"""
 
-from menu import ITEM_TAGS, MENU, STORE_NAME, category_of, display_width, format_price, pad, show_categories, show_items
+from menu import (
+    ALLERGENS, ITEM_TAGS, MENU, STORE_NAME, category_of, display_width, filter_menu, format_allergens, format_price, pad,
+    show_categories, show_items,
+)
 from order import Order, OrderError
 from recommend import MOODS, TEMPERATURES, recommend
 from records import load_item_sales, load_orders, save_order, summarize
@@ -46,10 +49,11 @@ def show_order(order):
     print(f"    {pad('合計', width)}       {format_price(order.total()):>8}")
 
 
-def order_from_category(order, category):
-    items = MENU[category]
+def order_from_category(order, category, excluded):
+    items = filter_menu(MENU, excluded)[category]
+    hidden_count = len(MENU[category]) - len(items)
     while True:
-        show_items(category)
+        show_items(category, items, hidden_count)
         choice = ask_number("注文する品の番号を入力してください: ", len(items))
         if choice is None:
             continue
@@ -65,7 +69,7 @@ def order_from_category(order, category):
         print(f"{name} を追加しました。")
 
 
-def browse_menu(order):
+def browse_menu(order, excluded):
     categories = list(MENU)
     while True:
         show_categories()
@@ -74,7 +78,34 @@ def browse_menu(order):
             continue
         if choice == 0:
             return
-        order_from_category(order, categories[choice - 1])
+        order_from_category(order, categories[choice - 1], excluded)
+
+
+def describe_excluded(excluded):
+    return "・".join(a for a in ALLERGENS if a in excluded) or "なし"
+
+
+def allergy_menu(excluded):
+    """除外するアレルギーを番号で切り替える。excluded（集合）をその場で書き換える。"""
+    while True:
+        print("\n--- アレルギーで絞り込む ---")
+        print("選んだアレルギーを含む料理は、メニューとおすすめに表示されなくなります。")
+        for i, allergen in enumerate(ALLERGENS, start=1):
+            mark = "[除外]" if allergen in excluded else "[    ]"
+            print(f"{i}. {mark} {allergen}")
+        reset = len(ALLERGENS) + 1
+        print(f"{reset}. すべて解除")
+        print("0. 戻る")
+        choice = ask_number("切り替える番号を入力してください: ", reset)
+        if choice is None:
+            continue
+        if choice == 0:
+            return
+        if choice == reset:
+            excluded.clear()
+        else:
+            excluded ^= {ALLERGENS[choice - 1]}
+        print(f"除外中: {describe_excluded(excluded)}")
 
 
 def manage_order(order):
@@ -143,12 +174,14 @@ def ask_age():
     return ask_until_valid("\n召し上がる方の年齢（Enterで指定なし）: ", parse_age)
 
 
-def recommend_menu(order):
+def recommend_menu(order, excluded):
+    if excluded:
+        print(f"\n（アレルギー {describe_excluded(excluded)} を含む料理はおすすめしません）")
     mood = ask_choice("今の気分は？", MOODS)
     temperature = ask_choice("温かいもの・冷たいもの、どちらがいいですか？", TEMPERATURES)
     budget = ask_budget()
     age = ask_age()
-    results = recommend(MENU, ITEM_TAGS, load_item_sales(), mood, temperature, budget, age)
+    results = recommend(filter_menu(MENU, excluded), ITEM_TAGS, load_item_sales(), mood, temperature, budget, age)
     if not results:
         print("\n条件に合うおすすめが見つかりませんでした。条件を変えてお試しください。")
         return
@@ -160,6 +193,7 @@ def recommend_menu(order):
             print(f"{i}. {pad(r['name'], width)}  {format_price(r['price']):>7}  （{r['category']}）")
             if r["reasons"]:
                 print(f"     {' / '.join(r['reasons'])}")
+            print(f"     アレルギー: {format_allergens(r['name'])}")
         print("0. 戻る")
         choice = ask_number("注文する場合は番号を入力してください: ", len(results))
         if choice is None:
@@ -234,6 +268,7 @@ def history_menu():
 def main():
     show_store_name()
     order = Order()
+    excluded = set()  # 除外するアレルギー（メニューとおすすめで共通）
     while True:
         print("\n--- メイン ---")
         print("1. メニューを見る・注文する")
@@ -241,12 +276,13 @@ def main():
         print("3. 会計する")
         print("4. 注文履歴・集計")
         print("5. おすすめを聞く")
+        print(f"6. アレルギーで絞り込む（除外中: {describe_excluded(excluded)}）")
         print("0. 終了")
-        choice = ask_number("番号を入力してください: ", 5)
+        choice = ask_number("番号を入力してください: ", 6)
         if choice == 0:
             break
         if choice == 1:
-            browse_menu(order)
+            browse_menu(order, excluded)
         elif choice == 2:
             manage_order(order)
         elif choice == 3 and checkout(order):
@@ -254,7 +290,9 @@ def main():
         elif choice == 4:
             history_menu()
         elif choice == 5:
-            recommend_menu(order)
+            recommend_menu(order, excluded)
+        elif choice == 6:
+            allergy_menu(excluded)
 
 
 def run():

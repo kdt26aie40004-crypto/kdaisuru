@@ -65,6 +65,67 @@ ITEM_TAGS = {
 }
 
 
+# アレルギー表示の対象（食品表示で表示義務のある特定原材料8品目）。ボタンや表示はこの順で並べる。
+ALLERGENS = ["えび", "かに", "くるみ", "小麦", "そば", "卵", "乳", "落花生"]
+
+# 品名 -> 含まれる特定原材料。MENU に品を追加したらここにも追加する。
+# ※一般的なレシピを想定した仮のデータ。実際に提供する前に、必ず店舗のレシピ・仕入れ品で確認すること。
+ITEM_ALLERGENS = {
+    "ブレンドコーヒー": set(),
+    "アメリカーノ": set(),
+    "カフェラテ": {"乳"},
+    "カプチーノ": {"乳"},
+    "カフェモカ": {"乳"},
+    "アイスコーヒー": set(),
+    "ダージリンティー": set(),
+    "アールグレイ": set(),
+    "抹茶ラテ": {"乳"},
+    "オレンジジュース": set(),
+    "自家製レモネード": set(),
+    "ミックスサンドイッチ": {"小麦", "卵", "乳"},
+    "BLTサンド": {"小麦", "卵"},
+    "ナポリタン": {"小麦", "乳"},
+    "カルボナーラ": {"小麦", "卵", "乳"},
+    "オムライス": {"卵", "乳"},
+    "本日のスープセット": {"小麦", "乳"},
+    "ベイクドチーズケーキ": {"小麦", "卵", "乳"},
+    "ガトーショコラ": {"小麦", "卵", "乳"},
+    "自家製プリン": {"卵", "乳"},
+    "フレンチトースト": {"小麦", "卵", "乳"},
+    "バニラアイス": {"卵", "乳"},
+}
+
+
+def allergens_of(name):
+    """品に含まれる特定原材料を ALLERGENS の順で返す。"""
+    contained = ITEM_ALLERGENS.get(name, set())
+    return [a for a in ALLERGENS if a in contained]
+
+
+def format_allergens(name):
+    if name not in ITEM_ALLERGENS:
+        return "情報なし"
+    return "・".join(allergens_of(name)) or "なし"
+
+
+def is_hidden_by_allergens(name, excluded):
+    """除外するアレルギー excluded のどれかを含む品なら True。
+    アレルギー情報が登録されていない品は、安全のため絞り込み中は隠す。"""
+    if not excluded:
+        return False
+    if name not in ITEM_ALLERGENS:
+        return True
+    return bool(ITEM_ALLERGENS[name] & set(excluded))
+
+
+def filter_menu(menu, excluded):
+    """除外するアレルギーを含む品を取り除いたメニューを返す（カテゴリは残す）。"""
+    return {
+        category: [(name, price) for name, price in items if not is_hidden_by_allergens(name, excluded)]
+        for category, items in menu.items()
+    }
+
+
 def category_of(name):
     """品名のカテゴリを返す。現在のメニューにない品は「その他」。"""
     for category, items in MENU.items():
@@ -93,10 +154,15 @@ def show_categories():
     print("0. 戻る")
 
 
-def show_items(category):
-    items = MENU[category]
-    width = max(display_width(name) for name, _ in items)
+def show_items(category, items, hidden_count=0):
+    """items: 表示する [(品名, 価格)]（アレルギーで絞り込み済み）。hidden_count: 絞り込みで隠した品数。"""
     print(f"\n=== {category} ===")
-    for i, (name, price) in enumerate(items, start=1):
-        print(f"{i:>2}. {pad(name, width)}  {format_price(price):>7}")
+    if hidden_count:
+        print(f"（アレルギーの絞り込みで {hidden_count}品を非表示中）")
+    if not items:
+        print("このカテゴリに表示できる品はありません。")
+    else:
+        width = max(display_width(name) for name, _ in items)
+        for i, (name, price) in enumerate(items, start=1):
+            print(f"{i:>2}. {pad(name, width)}  {format_price(price):>7}  アレルギー: {format_allergens(name)}")
     print(" 0. 戻る")

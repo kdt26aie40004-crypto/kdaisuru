@@ -146,6 +146,31 @@
   .menu-item .error { grid-column: 1 / -1; margin-top: -6px; }
   .menu-item .error:empty { display: none; }
 
+  /* アレルギー絞り込み */
+  .allergen-bar {
+    margin-bottom: 16px; padding: 14px 16px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--blue-50), var(--blue-100));
+    border: 1px solid var(--line);
+  }
+  .allergen-bar .bar-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+  .allergen-bar .title { font-weight: 700; color: var(--blue-900); }
+  .allergen-bar .title small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .allergen-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .allergen-buttons button { padding: 5px 14px; background: #fff; }
+  .allergen-buttons button[aria-pressed="true"] {
+    background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 700;
+    text-decoration: line-through; text-decoration-color: rgba(246, 178, 107, .9); text-decoration-thickness: 2px;
+  }
+  .allergen-buttons .clear { border-style: dashed; color: var(--muted); }
+  .allergen-status { font-size: 13px; color: var(--blue-700); font-weight: 700; }
+  .allergen-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; }
+  .allergen-chips .label { color: var(--muted); margin-right: 2px; }
+  .allergen-chip { padding: 1px 8px; border-radius: 999px; background: #fff1e3; color: #9a4d0b; border: 1px solid #f6d3ae; font-weight: 700; }
+  .allergen-chip.none { background: #eaf6ee; color: #1f6f43; border-color: #bfe3cc; }
+  .empty-menu { grid-column: 1 / -1; padding: 28px 12px; text-align: center; color: var(--muted); border: 1px dashed var(--blue-200); border-radius: 14px; background: var(--blue-50); }
+  .tab-count { font-size: 12px; opacity: .8; margin-left: 4px; }
+  .rec-note { margin: 0 0 8px; font-size: 13px; color: var(--blue-700); font-weight: 700; }
+
   /* 数量ステッパー */
   .stepper { display: inline-flex; align-items: center; justify-self: start; border: 1px solid var(--blue-200); border-radius: 999px; background: #fff; overflow: hidden; }
   .stepper button { border: 0; border-radius: 0; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; color: var(--blue-600); background: #fff; }
@@ -269,6 +294,13 @@
 <main>
   <section class="panel" aria-labelledby="menu-title">
     <div class="panel-head"><h2 id="menu-title">メニュー</h2></div>
+    <div class="allergen-bar" role="group" aria-labelledby="allergen-title">
+      <div class="bar-head">
+        <span class="title" id="allergen-title">アレルギーで絞り込む<small>押した項目を含む料理を表示しません</small></span>
+        <span class="allergen-status" id="allergen-status" role="status"></span>
+      </div>
+      <div class="allergen-buttons" id="allergen-buttons"></div>
+    </div>
     <div class="tabs" id="category-tabs" role="tablist"></div>
     <ul class="menu-list" id="menu-list"></ul>
   </section>
@@ -307,6 +339,7 @@
       <div><input type="text" id="age" inputmode="numeric" size="4"> 歳 <span class="muted" id="age-note"></span></div>
     </div>
     <div class="error" id="recommend-error" role="alert"></div>
+    <p class="rec-note" id="recommend-allergen-note" hidden></p>
     <p class="muted" id="recommend-empty" hidden>条件に合うおすすめが見つかりませんでした。条件を変えてお試しください。</p>
     <ul class="rec-list" id="recommend-list"></ul>
   </div>
@@ -382,6 +415,54 @@ const ITEM_TAGS = {
 };
 
 const PRICES = Object.fromEntries(MENU.flatMap(([, items]) => items));
+
+// アレルギー表示の対象（食品表示で表示義務のある特定原材料8品目）。ボタンや表示はこの順で並べる。
+const ALLERGENS = ["えび", "かに", "くるみ", "小麦", "そば", "卵", "乳", "落花生"];
+
+// 品名 -> 含まれる特定原材料（menu.py の ITEM_ALLERGENS と同じ）。
+// ※一般的なレシピを想定した仮のデータ。実際に提供する前に、必ず店舗のレシピ・仕入れ品で確認すること。
+const ITEM_ALLERGENS = {
+  "ブレンドコーヒー": [],
+  "アメリカーノ": [],
+  "カフェラテ": ["乳"],
+  "カプチーノ": ["乳"],
+  "カフェモカ": ["乳"],
+  "アイスコーヒー": [],
+  "ダージリンティー": [],
+  "アールグレイ": [],
+  "抹茶ラテ": ["乳"],
+  "オレンジジュース": [],
+  "自家製レモネード": [],
+  "ミックスサンドイッチ": ["小麦", "卵", "乳"],
+  "BLTサンド": ["小麦", "卵"],
+  "ナポリタン": ["小麦", "乳"],
+  "カルボナーラ": ["小麦", "卵", "乳"],
+  "オムライス": ["卵", "乳"],
+  "本日のスープセット": ["小麦", "乳"],
+  "ベイクドチーズケーキ": ["小麦", "卵", "乳"],
+  "ガトーショコラ": ["小麦", "卵", "乳"],
+  "自家製プリン": ["卵", "乳"],
+  "フレンチトースト": ["小麦", "卵", "乳"],
+  "バニラアイス": ["卵", "乳"],
+};
+
+/** 品に含まれる特定原材料を ALLERGENS の順で返す。 */
+function allergensOf(name) {
+  const contained = ITEM_ALLERGENS[name] || [];
+  return ALLERGENS.filter((a) => contained.includes(a));
+}
+
+/** 除外するアレルギーのどれかを含む品なら true。情報が登録されていない品は、安全のため絞り込み中は隠す。 */
+function isHiddenByAllergens(name, excluded) {
+  if (excluded.size === 0) return false;
+  if (!(name in ITEM_ALLERGENS)) return true;
+  return ITEM_ALLERGENS[name].some((a) => excluded.has(a));
+}
+
+/** 除外するアレルギーを含む品を取り除いたメニュー（カテゴリは残す）。 */
+function filterMenu(menu, excluded) {
+  return menu.map(([category, items]) => [category, items.filter(([name]) => !isHiddenByAllergens(name, excluded))]);
+}
 
 function categoryOf(name) {
   const found = MENU.find(([, items]) => items.some(([itemName]) => itemName === name));
@@ -582,10 +663,10 @@ const OPPOSITE_TEMPERATURE = { "温かい": "冷たい", "冷たい": "温かい
 const CAFFEINE_TAG = "カフェイン";
 const CHILD_AGE = 12;
 
-function recommend({ sales, mood = null, temperature = null, budget = null, age = null, limit = 3 }) {
+function recommend({ menu = MENU, sales, mood = null, temperature = null, budget = null, age = null, limit = 3 }) {
   const isChild = age !== null && age <= CHILD_AGE;
   const candidates = [];
-  for (const [category, items] of MENU) {
+  for (const [category, items] of menu) {
     for (const [name, price] of items) {
       const tags = new Set(ITEM_TAGS[name] || []);
       if (mood && !tags.has(mood)) continue;
@@ -632,6 +713,7 @@ function el(tag, props = {}, ...children) {
 const $ = (id) => document.getElementById(id);
 let order = new Order();
 let currentCategory = 0;
+const excludedAllergens = new Set();  // 除外するアレルギー（メニューとおすすめで共通）
 
 function toast(message) {
   const t = $("toast");
@@ -656,11 +738,53 @@ function addToOrder(name, quantityText) {
 }
 
 function renderTabs() {
+  const visible = filterMenu(MENU, excludedAllergens);
   const tabs = $("category-tabs");
-  tabs.replaceChildren(...MENU.map(([category], i) => el("button", {
-    type: "button", role: "tab", "aria-selected": String(i === currentCategory),
-    onclick: () => { currentCategory = i; renderTabs(); renderMenu(); },
-  }, category)));
+  tabs.replaceChildren(...MENU.map(([category, items], i) => {
+    const shown = visible[i][1].length;
+    return el("button", {
+      type: "button", role: "tab", "aria-selected": String(i === currentCategory),
+      onclick: () => { currentCategory = i; renderTabs(); renderMenu(); },
+    }, category, shown < items.length ? el("span", { class: "tab-count" }, `(${shown})`) : null);
+  }));
+}
+
+function formatExcluded() {
+  return ALLERGENS.filter((a) => excludedAllergens.has(a)).join("・");
+}
+
+function renderAllergenBar() {
+  $("allergen-buttons").replaceChildren(
+    ...ALLERGENS.map((allergen) => el("button", {
+      type: "button", "aria-pressed": String(excludedAllergens.has(allergen)),
+      title: `${allergen}を含む料理を${excludedAllergens.has(allergen) ? "表示する" : "隠す"}`,
+      onclick: () => { excludedAllergens.has(allergen) ? excludedAllergens.delete(allergen) : excludedAllergens.add(allergen); onAllergensChanged(); },
+    }, allergen)),
+    el("button", {
+      type: "button", class: "clear", disabled: excludedAllergens.size === 0,
+      onclick: () => { excludedAllergens.clear(); onAllergensChanged(); },
+    }, "すべて解除"));
+  const hidden = MENU.flatMap(([, items]) => items).filter(([name]) => isHiddenByAllergens(name, excludedAllergens)).length;
+  $("allergen-status").textContent = excludedAllergens.size ? `${formatExcluded()} を含む ${hidden}品を非表示中` : "";
+}
+
+function onAllergensChanged() {
+  renderAllergenBar();
+  renderTabs();
+  renderMenu();
+  if ($("recommend-dialog").open) renderRecommend();
+}
+
+/** アレルギー表示（チップ）。 */
+function allergenChips(name) {
+  const list = allergensOf(name);
+  return el("div", { class: "allergen-chips" },
+    el("span", { class: "label" }, "アレルギー"),
+    !(name in ITEM_ALLERGENS)
+      ? el("span", { class: "allergen-chip" }, "情報なし")
+      : list.length
+        ? list.map((a) => el("span", { class: "allergen-chip" }, a))
+        : el("span", { class: "allergen-chip none" }, "なし"));
 }
 
 /** 数量入力欄と −／＋ ボタン。入力欄は直接入力もでき、値のチェックは追加時に行う。 */
@@ -684,7 +808,12 @@ function quantityStepper(name, onEnter) {
 }
 
 function renderMenu() {
-  const [, items] = MENU[currentCategory];
+  const [, items] = filterMenu(MENU, excludedAllergens)[currentCategory];
+  if (items.length === 0) {
+    $("menu-list").replaceChildren(el("li", { class: "empty-menu" },
+      `${formatExcluded()} を含まない料理は、このカテゴリにはありません。`));
+    return;
+  }
   $("menu-list").replaceChildren(...items.map(([name, price]) => {
     const error = el("span", { class: "error", role: "alert" });
     const add = () => { error.textContent = addToOrder(name, input.value) || ""; };
@@ -692,6 +821,7 @@ function renderMenu() {
     return el("li", { class: "menu-item" },
       el("span", { class: "name" }, name),
       el("span", { class: "price-chip" }, formatPrice(price)),
+      allergenChips(name),
       stepper,
       el("button", { type: "button", class: "add primary", onclick: add }, "追加"),
       error);
@@ -781,7 +911,11 @@ function renderRecommend() {
   try { age = parseAge($("age").value); } catch (e) { errors.push(e.message); }
   // 入力に誤りがある間は、おすすめを出さずに理由だけを表示する
   $("recommend-error").textContent = errors.join("　");
+  const note = $("recommend-allergen-note");
+  note.hidden = excludedAllergens.size === 0;
+  note.textContent = `アレルギー ${formatExcluded()} を含む料理はおすすめしません（メニュー画面で変更できます）`;
   const results = errors.length ? [] : recommend({
+    menu: filterMenu(MENU, excludedAllergens),
     sales: recommendSales, mood: checked("mood"), temperature: checked("temperature"), budget, age,
   });
   $("recommend-empty").hidden = errors.length > 0 || results.length > 0;
@@ -795,6 +929,7 @@ function renderRecommend() {
       stepper,
       el("button", { type: "button", class: "add primary", onclick: add }, "注文に追加"),
       el("span", { class: "reasons" }, `${r.category}｜${r.reasons.join(" / ") || "おすすめ"}`),
+      allergenChips(r.name),
       error);
   }));
 }
@@ -893,6 +1028,7 @@ for (const b of document.querySelectorAll("[data-close]")) {
   b.addEventListener("click", () => b.closest("dialog").close());
 }
 setupRecommend();
+renderAllergenBar();
 renderTabs();
 renderMenu();
 renderOrder();
