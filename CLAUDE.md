@@ -123,6 +123,7 @@ Python（標準ライブラリのみ）で実装。画面はウィンドウ版�
 - 人気メニューは `popularItems()`（集計）→ `renderPopular()`（描画）→ `showSlide()`（表示切り替え。見えないスライドは `inert`）。
 - カテゴリの色は CSS の `.cat-0`〜`.cat-3`（`--accent` / `--accent-2` / `--accent-soft` / `--accent-ink` / `--accent-tint` / `--art-*`）で定義し、JS はタブ・メニュー一覧・おすすめ行に `cat-<カテゴリ番号>` クラスを付けるだけ。**カテゴリを増やしたら `.cat-N` も追加する**。イラストの背景は `ART_BG` が `var(--art-bg)` などを参照するので、カテゴリ色に自動で染まる。
 - イラストは `ART`（品名 → SVG の中身、viewBox 160×100）に定義し、`artHotCup()` / `artColdGlass()` / `artPasta()` / `artSandwich()` / `artCakeSlice()` などの部品関数で組み立てている。**品を追加・改名したら `ART` にも追加する**。SVG 内で `id`（グラデーション等）は使わない（同じページに何枚も並ぶため衝突する）。
+- README のスクリーンショットは `docs/images/*.png`（1280×860、スマホは端末枠付き）。画面の見た目を変えたら撮り直す。撮るときはサンプルの注文データを localStorage に入れてから `msedge --headless=new --screenshot` で撮影する。
 - 動作確認はヘッドレスの Edge（`msedge --headless=new --dump-dom` / `--screenshot`）で行える。ヘッドレスはウィンドウ幅の下限が約500pxなので、スマホ幅の確認は幅380px程度の iframe に入れて撮る。
 
 ## Conventions

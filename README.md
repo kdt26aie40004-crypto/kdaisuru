@@ -4,6 +4,8 @@
 メニューを見て数量を指定して注文し、会計すると注文が記録され、あとから履歴や売上を集計できます。
 気分や予算に合わせた「おすすめ」や、アレルギーで料理を絞り込む機能もあります。
 
+![ブルー・アルバ 注文システムのメイン画面（HTML 版）](docs/images/main.png)
+
 同じ機能を、使う場面に合わせて **3つの画面** で用意しています。
 
 | 版 | 起動方法 | 特徴 |
@@ -11,6 +13,25 @@
 | **HTML 版**（メイン） | `index.html` をダブルクリック | ブラウザだけで動く。Python 不要・オフライン可。イラスト・スライド付きのデザイン |
 | ウィンドウ版 | `python main.py` | Python（tkinter）のウィンドウアプリ |
 | コンソール版 | `python main.py --cli` | 文字だけで操作する版 |
+
+---
+
+## 画面イメージ（HTML 版）
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/allergy.png" alt="アレルギーの絞り込み（小麦を除外してデザートを表示）"><br><b>アレルギーで絞り込み</b><br>押したアレルギーを含む料理を非表示にします</td>
+    <td width="50%"><img src="docs/images/recommend.png" alt="おすすめ画面（甘いもの・温かいもの）"><br><b>おすすめ</b><br>気分・温度・予算・年齢で、合う品を理由付きで提案します</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/checkout.png" alt="会計の確認画面（合計金額を表示）"><br><b>会計</b><br>「会計」ボタンで注文内容と合計金額を表示します</td>
+    <td width="50%"><img src="docs/images/summary.png" alt="注文履歴・売上集計の画面"><br><b>注文履歴・売上集計</b><br>日別・カテゴリ別・品目別の売上を集計します</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/images/mobile.png" alt="スマートフォンでの表示" width="320"><br><b>スマートフォン表示</b><br>画面幅が狭いときは縦1列に並びます</td>
+    <td width="50%">画面の注文データは説明用のサンプルです。<br><br>料理のイラストはイメージです。</td>
+  </tr>
+</table>
 
 ---
 
@@ -111,6 +132,7 @@ kdaisuru/
 ├── records.py      注文記録の保存・読み込み・集計
 ├── recommend.py    おすすめの選び方
 ├── validation.py   入力チェック
+├── docs/images/    README 用のスクリーンショット
 ├── CLAUDE.md       開発メモ（要件の一覧・設計・決まりごと）
 └── README.md       このファイル
 ```
