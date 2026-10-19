@@ -146,6 +146,17 @@
   .menu-item .error { grid-column: 1 / -1; margin-top: -6px; }
   .menu-item .error:empty { display: none; }
 
+  /* 参考画像（自作イラスト） */
+  .menu-item .art {
+    order: -1; grid-column: 1 / -1; margin: -18px -16px 0; aspect-ratio: 16 / 10; overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .art svg { display: block; width: 100%; height: 100%; }
+  .menu-item:hover .art svg { transform: scale(1.04); }
+  .menu-item .art svg { transition: transform .25s; }
+  .rec-art { grid-row: 1 / span 4; width: 96px; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .image-note { font-size: 12px; color: var(--muted); }
+
   /* アレルギー絞り込み */
   .allergen-bar {
     margin-bottom: 16px; padding: 14px 16px; border-radius: 14px;
@@ -239,16 +250,22 @@
   .choices input { accent-color: var(--blue-600); margin: 0; }
   .rec-list { list-style: none; margin: 14px 0 0; padding: 0; }
   .rec-item {
-    display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px 12px; align-items: center;
+    display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 8px 12px; align-items: center;
     padding: 14px 16px; margin-bottom: 10px; border-radius: 14px;
     background: linear-gradient(90deg, var(--blue-50), #fff);
     border: 1px solid var(--line); border-left: 5px solid var(--blue-500);
   }
   .rec-item strong { color: var(--navy); }
-  .rec-item .reasons { grid-column: 1 / -1; font-size: 13px; color: var(--blue-700); }
-  .rec-item .error { grid-column: 1 / -1; }
+  .rec-item .reasons { grid-column: 2 / -1; font-size: 13px; color: var(--blue-700); }
+  .rec-item .allergen-chips { grid-column: 2 / -1; }
+  .rec-item .error { grid-column: 2 / -1; }
   .rec-item .error:empty { display: none; }
-  @media (max-width: 560px) { .rec-item { grid-template-columns: 1fr auto; } }
+  @media (max-width: 560px) {
+    .rec-item { grid-template-columns: auto 1fr auto; }
+    .rec-art { width: 72px; grid-row: 1 / span 2; }
+    .rec-item .stepper { grid-column: 2 / -1; justify-self: start; }
+    .rec-item .add { grid-column: 2 / -1; justify-self: stretch; }
+  }
 
   .history-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .kpis { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
@@ -293,7 +310,7 @@
 
 <main>
   <section class="panel" aria-labelledby="menu-title">
-    <div class="panel-head"><h2 id="menu-title">メニュー</h2></div>
+    <div class="panel-head"><h2 id="menu-title">メニュー</h2><span class="image-note">※画像はイメージです</span></div>
     <div class="allergen-bar" role="group" aria-labelledby="allergen-title">
       <div class="bar-head">
         <span class="title" id="allergen-title">アレルギーで絞り込む<small>押した項目を含む料理を表示しません</small></span>
@@ -693,6 +710,186 @@ function recommend({ menu = MENU, sales, mood = null, temperature = null, budget
   });
 }
 
+// ===== 参考画像（自作イラスト。固定の SVG 文字列で、外部ファイル・通信なし） =====
+// ※ここの文字列だけは HTML として解釈させる（ユーザー入力や localStorage の値は絶対に混ぜない）。
+
+const ART_BG = '<rect width="160" height="100" fill="#e4eefc"/>'
+  + '<circle cx="132" cy="14" r="30" fill="#d4e5fb"/><circle cx="22" cy="94" r="28" fill="#d4e5fb"/>'
+  + '<ellipse cx="80" cy="91" rx="50" ry="5" fill="#9fbde8" opacity=".35"/>';
+const STEAM = '<g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".95">'
+  + '<path d="M70 32c-4-5 4-8 0-14"/><path d="M81 29c-4-5 4-8 0-14"/><path d="M92 32c-4-5 4-8 0-14"/></g>';
+
+/** ソーサー付きの白いカップ（青いライン入り）。liquid: 飲み物の色、top: 表面の飾り。 */
+function artHotCup(liquid, top = "", extra = "") {
+  return STEAM + extra
+    + '<ellipse cx="80" cy="84" rx="42" ry="7" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<path d="M108 52a11 11 0 1 1 -2 20" fill="none" stroke="#bcd4f6" stroke-width="9" stroke-linecap="round"/>'
+    + '<path d="M108 52a11 11 0 1 1 -2 20" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>'
+    + '<path d="M50 44h60l-6 32a8 8 0 0 1 -8 6H64a8 8 0 0 1 -8 -6z" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<path d="M54 62h52" stroke="#3b7ddd" stroke-width="4"/>'
+    + `<ellipse cx="80" cy="44" rx="30" ry="7" fill="${liquid}"/>` + top;
+}
+
+const ART_HEART = (color) =>
+  `<path d="M80 49c-7-3-10-5-10-7.5a4.5 4.5 0 0 1 10-1.5a4.5 4.5 0 0 1 10 1.5c0 2.5-3 4.5-10 7.5z" fill="${color}"/>`;
+
+/** 氷とストロー入りのグラス。 */
+function artColdGlass(liquid, extra = "") {
+  return '<path d="M86 64L100 6" stroke="#3b7ddd" stroke-width="5" stroke-linecap="round"/>'
+    + '<path d="M58 22h44l-5 60a5 5 0 0 1 -5 5H68a5 5 0 0 1 -5 -5z" fill="#fff" fill-opacity=".45" stroke="#9fc0ee" stroke-width="2"/>'
+    + `<path d="M60.3 40h39.4l-3.5 42a3 3 0 0 1 -3 3H66.8a3 3 0 0 1 -3 -3z" fill="${liquid}"/>`
+    + '<g fill="#fff" opacity=".55"><rect x="65" y="42" width="12" height="12" rx="2" transform="rotate(-12 71 48)"/>'
+    + '<rect x="81" y="47" width="12" height="12" rx="2" transform="rotate(14 87 53)"/>'
+    + '<rect x="70" y="60" width="11" height="11" rx="2" transform="rotate(6 75 65)"/></g>'
+    + '<path d="M63 28v50" stroke="#fff" stroke-width="3" opacity=".6" stroke-linecap="round"/>'
+    + extra;
+}
+
+/** グラスの縁に飾る果物の輪切り。 */
+const ART_SLICE = (x, y, peel, flesh) => `<g transform="translate(${x} ${y})"><circle r="12" fill="${peel}"/>`
+  + `<circle r="9.5" fill="${flesh}"/><path d="M-9 0h18M0 -9v18M-6.5 -6.5l13 13M6.5 -6.5l-13 13" stroke="${peel}" stroke-width="1.5"/></g>`;
+const ART_MINT = '<path d="M100 36c6-10 16-10 18-6-4 6-10 8-18 6z" fill="#4caf6a"/><path d="M100 36l14-5" stroke="#2e7d4a" stroke-width="1"/>';
+
+/** 皿（青い縁取り）。 */
+const ART_PLATE = '<ellipse cx="80" cy="76" rx="58" ry="15" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+  + '<ellipse cx="80" cy="74" rx="44" ry="10" fill="none" stroke="#e1ecfb" stroke-width="2"/>';
+
+/** 皿に盛ったパスタ。strand: 麺の色、extra: 具。 */
+function artPasta(strand, extra = "") {
+  return ART_PLATE
+    + `<path d="M48 70c0-14 14-22 32-22s32 8 32 22c0 4-14 6-32 6s-32-2-32-6z" fill="${strand}"/>`
+    + `<g fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round">`
+    + '<path d="M54 66c8-10 16 4 24-6s16 6 24-2"/><path d="M58 60c8-8 14 4 22-4s14 4 20 0"/><path d="M56 71c10-6 20 2 30-3s14 2 18 0"/></g>'
+    + extra;
+}
+
+/** 横から見たサンドイッチ1切れ。layers は下から順の具（[色, 高さ]、高さ 0 は葉物の波形）。 */
+function artSandwich(x, layers, pick = "") {
+  let y = 80;
+  let out = `<rect x="${x}" y="${y - 10}" width="40" height="10" rx="3" fill="#f6e2b3" stroke="#d6a65c" stroke-width="2"/>`;
+  y -= 10;
+  for (const [color, h] of layers) {
+    if (h === 0) {
+      out += `<path d="M${x - 3} ${y}q5 -7 10 0t10 0t10 0t10 0t9 0v-4H${x - 3}z" fill="${color}"/>`;
+      y -= 5;
+    } else {
+      out += `<rect x="${x - 2}" y="${y - h}" width="44" height="${h}" rx="3" fill="${color}"/>`;
+      y -= h;
+    }
+  }
+  out += `<path d="M${x} ${y}v-6a10 10 0 0 1 10 -10h20a10 10 0 0 1 10 10v6z" fill="#f6e2b3" stroke="#d6a65c" stroke-width="2"/>`;
+  return out + pick;
+}
+
+/** 三角柱のケーキ1切れ。 */
+function artCakeSlice(top, side, tip, base, extra = "") {
+  return ART_PLATE
+    + `<path d="M46 52L104 38L126 50L68 66z" fill="${top}"/>`
+    + `<path d="M68 66L126 50V70L68 86z" fill="${side}"/>`
+    + `<path d="M68 81L126 65V70L68 86z" fill="${base}"/>`
+    + `<path d="M46 52L68 66V86L46 72z" fill="${tip}"/>`
+    + `<path d="M46 67L68 81V86L46 72z" fill="${base}" opacity=".85"/>`
+    + extra;
+}
+
+const ART = {
+  "ブレンドコーヒー": artHotCup("#4a2a1a"),
+  "アメリカーノ": STEAM
+    + '<path d="M106 50h6a10 10 0 0 1 0 20h-6" fill="none" stroke="#1d4e89" stroke-width="6"/>'
+    + '<rect x="54" y="40" width="54" height="46" rx="8" fill="#2563c4"/>'
+    + '<ellipse cx="81" cy="42" rx="25" ry="5" fill="#6e4126"/>'
+    + '<path d="M62 56h38M62 64h38" stroke="#fff" stroke-width="2.5" opacity=".45"/>',
+  "カフェラテ": artHotCup("#c8996a", ART_HEART("#fff5e6")),
+  "カプチーノ": artHotCup("#f3e4cd",
+    '<ellipse cx="80" cy="44" rx="29" ry="6.5" fill="none" stroke="#a8693a" stroke-width="2.5"/>'
+    + '<g fill="#8a4f24"><circle cx="72" cy="43" r="1.6"/><circle cx="80" cy="46" r="1.6"/><circle cx="88" cy="42" r="1.6"/>'
+    + '<circle cx="77" cy="40" r="1.2"/><circle cx="91" cy="46" r="1.2"/><circle cx="68" cy="46" r="1.2"/></g>'),
+  "カフェモカ": '<path d="M106 50h6a10 10 0 0 1 0 22h-6" fill="none" stroke="#9fc0ee" stroke-width="5"/>'
+    + '<path d="M56 34h50v46a6 6 0 0 1 -6 6H62a6 6 0 0 1 -6 -6z" fill="#fff" fill-opacity=".5" stroke="#9fc0ee" stroke-width="2"/>'
+    + '<path d="M58 66h46v14a4 4 0 0 1 -4 4H62a4 4 0 0 1 -4 -4z" fill="#4a2414"/>'
+    + '<rect x="58" y="48" width="46" height="18" fill="#7a4a2e"/><rect x="58" y="42" width="46" height="6" fill="#e9d3b5"/>'
+    + '<path d="M54 40c0-8 8-12 14-10 2-8 18-8 22 0 8-2 16 4 14 10z" fill="#fffaf2" stroke="#ead9c3" stroke-width="1.5"/>'
+    + '<path d="M62 32c6 4 10-4 16 0s10-4 16 0" fill="none" stroke="#5a2e18" stroke-width="2.5" stroke-linecap="round"/>',
+  "アイスコーヒー": artColdGlass("#3b2214",
+    '<path d="M66 46c8 6 18-4 28 2" fill="none" stroke="#e9d3b5" stroke-width="4" stroke-linecap="round" opacity=".85"/>'),
+  "ダージリンティー": artHotCup("#c46a1a", "",
+    '<path d="M104 44C108 36 106 30 112 26" fill="none" stroke="#8a6a4a" stroke-width="1.5"/>'
+    + '<rect x="108" y="15" width="15" height="12" rx="2" fill="#f6b26b"/>'),
+  "アールグレイ": '<path d="M30 30c-4-5 4-8 0-14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'
+    + '<path d="M52 58c-14-2-18-14-20-20 6 2 14 8 20 10z" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<path d="M106 50c12 0 14 22 0 24" fill="none" stroke="#bcd4f6" stroke-width="8"/>'
+    + '<path d="M106 50c12 0 14 22 0 24" fill="none" stroke="#fff" stroke-width="4"/>'
+    + '<ellipse cx="80" cy="62" rx="30" ry="24" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<path d="M51 64h58" stroke="#3b7ddd" stroke-width="4"/>'
+    + '<path d="M62 41c4-7 32-7 36 0z" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<circle cx="80" cy="33" r="4" fill="#3b7ddd"/>',
+  "抹茶ラテ": artHotCup("#8db34a", ART_HEART("#f4f8e6")),
+  "オレンジジュース": artColdGlass("#f7a03a", ART_SLICE(58, 24, "#f08a1c", "#ffc66b")),
+  "自家製レモネード": artColdGlass("#f5e37a", ART_SLICE(58, 24, "#e9c31d", "#fff3a6") + ART_MINT),
+  "ミックスサンドイッチ":
+    artSandwich(34, [["#f29aa3", 6], ["#f7d34f", 7], ["#6cbf5a", 0]])
+    + artSandwich(86, [["#f7d34f", 7], ["#f29aa3", 6], ["#6cbf5a", 0]]),
+  "BLTサンド": artSandwich(60, [["#b5502f", 6], ["#e8463a", 7], ["#6cbf5a", 0]],
+    '<path d="M80 22v30" stroke="#c9a46a" stroke-width="2"/><path d="M80 22l12 4-12 4z" fill="#3b7ddd"/>'),
+  "ナポリタン": artPasta("#e8642c",
+    '<g fill="none" stroke="#3f9b4a" stroke-width="3"><circle cx="66" cy="62" r="5"/><circle cx="96" cy="66" r="5"/></g>'
+    + '<g fill="#f0a3a3" stroke="#d9787a" stroke-width="1"><ellipse cx="82" cy="58" rx="6" ry="3.5"/><ellipse cx="70" cy="70" rx="6" ry="3.5"/></g>'),
+  "カルボナーラ": artPasta("#f2d58a",
+    '<circle cx="80" cy="58" r="7" fill="#f6b21b" stroke="#fff" stroke-width="2"/>'
+    + '<g fill="#3a3a3a"><circle cx="64" cy="64" r="1.3"/><circle cx="94" cy="62" r="1.3"/><circle cx="74" cy="70" r="1.3"/>'
+    + '<circle cx="90" cy="70" r="1.3"/><circle cx="60" cy="70" r="1.3"/><circle cx="100" cy="68" r="1.3"/></g>'),
+  "オムライス": ART_PLATE
+    + '<path d="M44 70c0-14 18-24 36-24s36 10 36 24c0 6-16 8-36 8s-36-2-36-8z" fill="#f7c948"/>'
+    + '<path d="M50 66c6-10 18-14 30-14" fill="none" stroke="#fff" stroke-width="3" opacity=".5" stroke-linecap="round"/>'
+    + '<path d="M60 60l8 6 8-6 8 6 8-6 8 6" fill="none" stroke="#d93a2b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="108" cy="72" r="4" fill="#4caf6a"/>',
+  "本日のスープセット": ART_PLATE
+    + '<path d="M42 54h52a26 22 0 0 1 -52 0z" fill="#fff" stroke="#bcd4f6" stroke-width="2"/>'
+    + '<ellipse cx="68" cy="54" rx="26" ry="6" fill="#f08a3c"/>'
+    + '<path d="M56 54c6-3 12 2 18-1" fill="none" stroke="#fff" stroke-width="2" opacity=".6"/>'
+    + '<path d="M60 40c-4-5 4-8 0-14M72 38c-4-5 4-8 0-14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'
+    + '<ellipse cx="114" cy="70" rx="16" ry="11" fill="#d99a4e"/>'
+    + '<path d="M106 66l6 6M114 63l6 6" stroke="#f6d5a0" stroke-width="2" stroke-linecap="round"/>',
+  "ベイクドチーズケーキ": artCakeSlice("#c98b3f", "#fbe7a8", "#f6dc93", "#a8743a"),
+  "ガトーショコラ": artCakeSlice("#4a2a1c", "#5b3423", "#4f2d1f", "#3a2016",
+    '<g fill="#fff"><circle cx="70" cy="52" r="1.5"/><circle cx="84" cy="48" r="1.5"/><circle cx="96" cy="46" r="1.5"/>'
+    + '<circle cx="78" cy="56" r="1.2"/><circle cx="104" cy="50" r="1.2"/><circle cx="62" cy="56" r="1.2"/></g>'
+    + '<path d="M118 76c-6 0-8-6-2-8 0-6 10-6 10 0 6 2 4 8-2 8z" fill="#fffaf2"/>'),
+  "自家製プリン": ART_PLATE
+    + '<path d="M60 40h40l8 34H52z" fill="#f7d26b"/><path d="M60 40h40l2 9H58z" fill="#9a4f18"/>'
+    + '<path d="M62 49c0 6 4 6 4 0M84 49c0 8 4 8 4 0" fill="#9a4f18"/>'
+    + '<path d="M70 32c-2-6 6-12 10-8 4-4 12 2 10 8z" fill="#fffaf2"/>'
+    + '<circle cx="80" cy="26" r="5" fill="#d93a4b"/><path d="M80 21c2-5 6-7 8-7" fill="none" stroke="#3f7a3a" stroke-width="1.5"/>',
+  "フレンチトースト": ART_PLATE
+    + '<path d="M44 58l30-12 26 14-30 14z" fill="#e2a24a" stroke="#b9752a" stroke-width="2"/>'
+    + '<path d="M66 64l30-12 26 14-30 14z" fill="#e9b45a" stroke="#b9752a" stroke-width="2"/>'
+    + '<rect x="86" y="60" width="12" height="8" rx="1.5" fill="#fff4b8" transform="rotate(-20 92 64)"/>'
+    + '<path d="M80 70c4 4 2 10 6 12" fill="none" stroke="#8a4512" stroke-width="3" stroke-linecap="round"/>'
+    + '<g fill="#3b4fb5"><circle cx="54" cy="74" r="4"/><circle cx="62" cy="78" r="4"/><circle cx="112" cy="76" r="4"/></g>'
+    + '<circle cx="104" cy="80" r="4.5" fill="#d93a4b"/>',
+  "バニラアイス": '<path d="M52 50h56a28 22 0 0 1 -56 0z" fill="#fff" fill-opacity=".6" stroke="#9fc0ee" stroke-width="2"/>'
+    + '<path d="M78 72h4v10h-4z" fill="#cfe0f7"/><ellipse cx="80" cy="85" rx="16" ry="4" fill="#cfe0f7" stroke="#9fc0ee" stroke-width="1.5"/>'
+    + '<circle cx="70" cy="44" r="13" fill="#fffaf0" stroke="#efe3cc" stroke-width="1.5"/>'
+    + '<circle cx="90" cy="42" r="13" fill="#fff7e6" stroke="#efe3cc" stroke-width="1.5"/>'
+    + '<g fill="#3a2a1a"><circle cx="66" cy="42" r="1"/><circle cx="73" cy="47" r="1"/><circle cx="92" cy="39" r="1"/><circle cx="87" cy="45" r="1"/></g>'
+    + '<rect x="98" y="22" width="8" height="26" rx="2" fill="#e6b873" transform="rotate(20 102 35)"/>'
+    + '<path d="M70 30c4-8 12-8 14-4-4 4-8 6-14 4z" fill="#4caf6a"/>',
+};
+
+/** 未登録の品用（クロッシュをかぶせた皿）。 */
+const ART_FALLBACK = ART_PLATE
+  + '<path d="M44 70a36 30 0 0 1 72 0z" fill="#dbe8fb" stroke="#9fc0ee" stroke-width="2"/>'
+  + '<circle cx="80" cy="38" r="4" fill="#3b7ddd"/>';
+
+/** 品のイメージ画像（SVG）を入れた要素を返す。 */
+function itemArt(name, className = "art") {
+  const template = document.createElement("template");
+  template.innerHTML = `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" role="img">${ART_BG}${ART[name] || ART_FALLBACK}</svg>`;
+  const svg = template.content.firstElementChild;
+  svg.setAttribute("aria-label", `${name}のイメージ`);
+  return el("div", { class: className }, svg);
+}
+
 // ===== 画面 =====
 
 /** 要素を作る小さなヘルパー。文字列は textContent として入れる（HTML として解釈しない）。 */
@@ -820,6 +1017,7 @@ function renderMenu() {
     const { stepper, input } = quantityStepper(name, add);
     return el("li", { class: "menu-item" },
       el("span", { class: "name" }, name),
+      itemArt(name),
       el("span", { class: "price-chip" }, formatPrice(price)),
       allergenChips(name),
       stepper,
@@ -924,6 +1122,7 @@ function renderRecommend() {
     const add = () => { error.textContent = addToOrder(r.name, input.value) || ""; };
     const { stepper, input } = quantityStepper(r.name, add);
     return el("li", { class: "rec-item" },
+      itemArt(r.name, "art rec-art"),
       el("strong", {}, r.name),
       el("span", { class: "price-chip" }, formatPrice(r.price)),
       stepper,
